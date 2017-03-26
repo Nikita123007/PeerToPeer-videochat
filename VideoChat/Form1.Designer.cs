@@ -37,19 +37,19 @@
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Location = new System.Drawing.Point(13, 13);
+            this.pictureBox1.Location = new System.Drawing.Point(14, 14);
             this.pictureBox1.Margin = new System.Windows.Forms.Padding(4);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(482, 276);
+            this.pictureBox1.Size = new System.Drawing.Size(903, 580);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
             // btn_Start
             // 
-            this.btn_Start.Location = new System.Drawing.Point(12, 330);
+            this.btn_Start.Location = new System.Drawing.Point(12, 602);
             this.btn_Start.Margin = new System.Windows.Forms.Padding(4);
             this.btn_Start.Name = "btn_Start";
-            this.btn_Start.Size = new System.Drawing.Size(234, 34);
+            this.btn_Start.Size = new System.Drawing.Size(260, 38);
             this.btn_Start.TabIndex = 1;
             this.btn_Start.Text = "Start";
             this.btn_Start.UseVisualStyleBackColor = true;
@@ -58,17 +58,17 @@
             // comboBox1
             // 
             this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(12, 296);
+            this.comboBox1.Location = new System.Drawing.Point(556, 608);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(483, 27);
+            this.comboBox1.Size = new System.Drawing.Size(361, 29);
             this.comboBox1.TabIndex = 2;
             // 
             // btn_Stop
             // 
-            this.btn_Stop.Location = new System.Drawing.Point(254, 330);
+            this.btn_Stop.Location = new System.Drawing.Point(281, 602);
             this.btn_Stop.Margin = new System.Windows.Forms.Padding(4);
             this.btn_Stop.Name = "btn_Stop";
-            this.btn_Stop.Size = new System.Drawing.Size(241, 34);
+            this.btn_Stop.Size = new System.Drawing.Size(268, 38);
             this.btn_Stop.TabIndex = 3;
             this.btn_Stop.Text = "Stop";
             this.btn_Stop.UseVisualStyleBackColor = true;
@@ -76,17 +76,18 @@
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 19F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 21F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(508, 373);
+            this.ClientSize = new System.Drawing.Size(930, 645);
             this.Controls.Add(this.btn_Stop);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.btn_Start);
             this.Controls.Add(this.pictureBox1);
-            this.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Form1";
-            this.Text = "Form1";
+            this.Text = "Server";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);
