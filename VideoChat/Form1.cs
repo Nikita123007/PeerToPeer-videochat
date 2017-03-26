@@ -21,6 +21,7 @@ namespace VideoChat
         private Udp_Server udp_Server;
         private Udp_Server getsRequest;
         private Thread threadGetRequests;
+        private const int lengthDgram = 65500;
 
         public Form1()
         {
@@ -61,9 +62,43 @@ namespace VideoChat
         private void FinalVideo_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             Bitmap picture = (Bitmap)eventArgs.Frame.Clone();
-            byte[] pictureInByte = ImageToByteArray(picture);       
-            udp_Server.SendTo(pictureInByte);
+            byte[] pictureInByte = ImageToByteArray(picture);
+            SendBytesForUdp(udp_Server, pictureInByte);       
             pictureBox1.Image = picture;          
+        }
+        private void SendBytesForUdp(Udp_Server udp_Server, byte[] data)
+        {
+            byte[] sendData = new byte[lengthDgram];
+            int pointer = 0;
+            try
+            {
+                sendData[lengthDgram - 3] = 1;
+                sendData[lengthDgram - 2] = 1;
+                sendData[lengthDgram - 1] = 1;
+                sendData[0] = (byte)(data.Length / sendData.Length);
+                sendData[0] += (data.Length % sendData.Length != 0) ? (byte)1 : (byte)0;
+                udp_Server.SendTo(sendData);
+                for (int i = sendData[0]; i > 0; i--)
+                {
+                    for (int index = 0; index < lengthDgram; index++)
+                    {
+                        if (pointer < data.Length)
+                        {
+                            sendData[index] = data[pointer];
+                            pointer++;
+                        }
+                        else
+                        {
+                            sendData[index] = 0;
+                        }
+                    }
+                    udp_Server.SendTo(sendData);
+                }
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
         }
         private void btn_Stop_Click(object sender, EventArgs e)
         {

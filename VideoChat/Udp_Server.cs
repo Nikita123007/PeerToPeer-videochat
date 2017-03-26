@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.Windows.Forms;
 
 namespace VideoChat
 {
@@ -12,7 +13,6 @@ namespace VideoChat
     {
         private Socket socket;
         private IPEndPoint endPoint;
-        private const int lengthDgram = 65500;
 
         public Udp_Server(int port)
         {
@@ -21,43 +21,17 @@ namespace VideoChat
             //endPoint = new IPEndPoint(IPAddress.Broadcast, port);
             //socket.EnableBroadcast = true;
         }
-
-        public string SendTo(byte[] data)
+        public void SendTo(byte[] data)
         {
-            byte[] sendData = new byte[lengthDgram];
-            int pointer = 0;
             try
             {
-                sendData[lengthDgram - 3] = 1;
-                sendData[lengthDgram - 2] = 1;
-                sendData[lengthDgram - 1] = 1;
-                sendData[0] = (byte)(data.Length / sendData.Length);
-                sendData[0] += (data.Length % sendData.Length != 0) ? (byte)1 : (byte)0;
-                socket.SendTo(sendData, endPoint);
-                for (int i = sendData[0]; i > 0; i--)
-                {
-                    for (int index = 0; index < lengthDgram; index++)
-                    {
-                        if (pointer < data.Length)
-                        {
-                            sendData[index] = data[pointer];
-                            pointer++;
-                        }
-                        else
-                        {
-                            sendData[index] = 0;
-                        }
-                    }
-                    socket.SendTo(sendData, endPoint);
-                }
-                return "Файл успешно отправлен.";
+                socket.SendTo(data, endPoint);
             }
             catch (Exception error)
             {
-                return error.ToString();
+                MessageBox.Show(error.ToString());
             }
         }
-
         public void Close()
         {
             socket.Close();
