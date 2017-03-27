@@ -11,17 +11,26 @@ using AForge.Video.DirectShow;
 using AForge.Video;
 using System.IO;
 using System.Threading;
+using System.Net;
 
 namespace VideoChat
 {
     public partial class Form1 : Form
     {
+        // const
+        private const int lengthDgram = 65500;
+        private const int startPortsUsers = 9010;
+        private const int portRequestNewUser = 9002;
+        // const
+
         private FilterInfoCollection videoCaptureDiveses;
         private VideoCaptureDevice finalVideo;
         private Udp_Server udp_Server;
-        private Udp_Server getsRequest;
-        private Thread threadGetRequests;
-        private const int lengthDgram = 65500;
+        private Udp_Client getRequestsOfNewUser;
+        private Udp_Server setRequestOfNewUser;
+        private Thread threadGetRequests;        
+        private int userChatId;
+        private List<string> listUsersIp;
 
         public Form1()
         {
@@ -36,7 +45,22 @@ namespace VideoChat
             }
             comboBox1.SelectedIndex = 0;
             udp_Server = new Udp_Server(9001);
-            getsRequest = new Udp_Server(9002);
+            userChatId = GetUserChatId();
+            listUsersIp = new List<string>();
+        }
+        private void SetRequest(byte cancelFlag)
+        {
+            setRequestOfNewUser = new Udp_Server(portRequestNewUser);
+            string ipAddress = GetHostIP();
+            byte[] ip = new byte[5];
+            ip[0] = (byte)GetNumberOfIp(ipAddress, 1);
+            ip[1] = (byte)GetNumberOfIp(ipAddress, 2);
+            ip[2] = (byte)GetNumberOfIp(ipAddress, 3);
+            ip[3] = (byte)GetNumberOfIp(ipAddress, 4);
+            ip[4] = (byte)cancelFlag;
+            setRequestOfNewUser.SendTo(ip);
+            setRequestOfNewUser.Close();
+            setRequestOfNewUser = null;
         }
         private void btn_Start_Click(object sender, EventArgs e)
         {
@@ -54,9 +78,31 @@ namespace VideoChat
         }
         private void GetRequest(object sender)
         {
-            while (true)
+            try
             {
-
+                using (getRequestsOfNewUser = new Udp_Client(portRequestNewUser))
+                {
+                    while (true)
+                    {
+                        byte[] ipBytes = getRequestsOfNewUser.ReceiveTo(5);
+                        if (ipBytes[4] == 1)
+                        {
+                            SetRequest(0);
+                            AddUserIp(ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString());
+                        }
+                    }
+                }
+            }
+            catch(Exception error)
+            {
+                MessageBox.Show(error.Message);
+            }
+        }
+        private void AddUserIp(string ip)
+        {
+            if (!listUsersIp.Contains(ip))
+            {
+                listUsersIp.Add(ip);
             }
         }
         private void FinalVideo_NewFrame(object sender, NewFrameEventArgs eventArgs)
@@ -128,8 +174,38 @@ namespace VideoChat
             }
             if ((threadGetRequests != null) && (threadGetRequests.IsAlive))
             {
-                threadGetRequests.Abort();
+                getRequestsOfNewUser.Close();
+                getRequestsOfNewUser = null;
+                threadGetRequests.Abort();                
             }
+        }
+        private int GetUserChatId()
+        {
+            string ipAddress = GetHostIP();
+            int chatId = GetNumberOfIp(ipAddress, 4);
+            chatId += startPortsUsers;
+            return chatId;
+        }
+        private int GetNumberOfIp(string ipAddress, int number)
+        {
+            string[] numbersOfIp = new string[4] {"", "", "", ""};
+            for (int i = 0, j = 0; i < ipAddress.Length; i++)
+            {
+                if (ipAddress[i] != '.')
+                {
+                    numbersOfIp[j] += ipAddress[i];
+                }
+                else
+                {
+                    j++;
+                }
+            }
+            return Convert.ToInt32(numbersOfIp[number - 1]);
+        }
+        private string GetHostIP()
+        {
+            string Host = Dns.GetHostName();
+            return Dns.GetHostByName(Host).AddressList[0].ToString();
         }
     }
 }

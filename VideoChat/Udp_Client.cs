@@ -5,32 +5,34 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
-using System.Windows.Forms;
 
 namespace VideoChat
 {
-    class Udp_Server : IDisposable
+    class Udp_Client : IDisposable
     {
         private Socket socket;
         private IPEndPoint endPoint;
+        private string ipAddress = "127.0.0.1";
 
-        public Udp_Server(int port)
+        public Udp_Client(int port)
         {
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), port);
-            //endPoint = new IPEndPoint(IPAddress.Broadcast, port);
-            //socket.EnableBroadcast = true;
+            //Host = Dns.GetHostName();
+            //ipAddress = Dns.GetHostByName(Host).AddressList[0].ToString();
+            endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
+            socket.Bind(endPoint);
         }
-        public void SendTo(byte[] data)
+        public byte[] ReceiveTo(int lengthDgram)
         {
+            byte[] data = new byte[lengthDgram];
             try
             {
-                socket.SendTo(data, endPoint);
+                socket.Receive(data);
             }
-            catch (Exception error)
+            catch (Exception er)
             {
-                MessageBox.Show(error.ToString());
             }
+            return data;
         }
         public void Close()
         {
