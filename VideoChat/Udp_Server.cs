@@ -13,13 +13,40 @@ namespace VideoChat
     {
         private Socket socket;
         private IPEndPoint endPoint;
-
-        public Udp_Server(int port)
+        private bool connected;
+        public bool Connected
         {
+            get
+            {
+                return connected;
+            }
+        }
+
+        public Udp_Server()
+        {
+            connected = false;
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), port);
-            //endPoint = new IPEndPoint(IPAddress.Broadcast, port);
-            //socket.EnableBroadcast = true;
+        }
+        public void Connect(string ip, int port)
+        {
+            try
+            {
+                if (ip != "255.255.255.255")
+                {
+                    endPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+                    socket.EnableBroadcast = false;
+                }
+                else
+                {
+                    endPoint = new IPEndPoint(IPAddress.Broadcast, port);
+                    socket.EnableBroadcast = true;
+                }
+                connected = true;
+            }
+            catch (Exception)
+            {
+                connected = false;
+            }
         }
         public void SendTo(byte[] data)
         {

@@ -16,6 +16,10 @@ namespace VideoChat
 
         public Udp_Client(int port)
         {
+            CreateNew(port);
+        }
+        public void CreateNew(int port)
+        {
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //Host = Dns.GetHostName();
             //ipAddress = Dns.GetHostByName(Host).AddressList[0].ToString();
