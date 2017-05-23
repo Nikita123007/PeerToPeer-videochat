@@ -18,11 +18,6 @@ namespace VideoChat
     public partial class Form1 : Form
     {
         // const               
-        private const int SetInfo = 0;
-        private const int GetInfo = 1;
-        private const int TrySetUser = 2;
-        private const int AddUser = 3;
-        private const int RemoveUser = 4;
         private const int portRequestNewUser = 9002;
         private const string broadcast = "255.255.255.255";
         // const
@@ -73,6 +68,7 @@ namespace VideoChat
         {
             myChatNumber = 1;
             listUsersIp = new List<string>();
+            threadGetRequests = new Thread(GetRequest);
             RequestAboutNewUser = new Udp_Sender();
             RequestsFromNewUser = new Udp_Receiver(portRequestNewUser);
             imageSize = new Point(0, 0);
@@ -105,7 +101,6 @@ namespace VideoChat
         {
             if ((threadGetRequests == null) || (!threadGetRequests.IsAlive))
             {
-                threadGetRequests = new Thread(GetRequest);
                 threadGetRequests.Start();
             }
         }
@@ -123,29 +118,29 @@ namespace VideoChat
                     lastGetChatNumber = chatNumber;
                     if (chatNumber == 0)
                         continue;
-                    if (requestNumber == 0)
+                    if (requestNumber == (byte)FlagsRequest.FSetInfo)
                     {
-                        AddUserIpAndPort(ipBytes);
+                        AddUserIpAndChatNumber(ip, chatNumber);
                     }
-                    if (requestNumber == 1)
+                    if (requestNumber == (byte)FlagsRequest.FGetInfo)
                     {
-                        SetRequestAboutNewUser(SetInfo, ip);
-                        AddUserIpAndPort(ipBytes);
+                        SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
+                        AddUserIpAndChatNumber(ip, chatNumber);
                     }
-                    if (requestNumber == TrySetUser)
+                    if (requestNumber == (byte)FlagsRequest.FTrySetUser)
                     {
                         if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                         {
-                            SetRequestAboutNewUser(AddUser, ip);
-                            AddUserIpAndPort(ipBytes);
+                            SetRequestAboutNewUser((byte)FlagsRequest.FAddUser, ip);
+                            AddUserIpAndChatNumber(ip, chatNumber);
                             AddNewUserInGroup(ip, chatNumber);
                         }
                     }
-                    if (requestNumber == AddUser)
+                    if (requestNumber == (byte)FlagsRequest.FAddUser)
                     {
                         AddNewUserInGroup(ip, chatNumber);
                     }
-                    if (requestNumber == RemoveUser)
+                    if (requestNumber == (byte)FlagsRequest.FRemoveUser)
                     {
                         RemoveUserWithGroup(ip, chatNumber);
                     }
@@ -153,7 +148,6 @@ namespace VideoChat
             }
             catch(Exception error)
             {
-                MessageBox.Show(error.Message);
             }
         }
         private void RemoveUserWithGroup(string ip, int chatNumber)
@@ -185,18 +179,17 @@ namespace VideoChat
                 }
             }
         }
-        private void AddUserIpAndPort(byte[] ipBytes)
+        private void AddUserIpAndChatNumber(string ip, int chatNumber)
         {
-            string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
             if (!listUsersIp.Contains(ip))
             {
                 listUsersIp.Add(ip);
-                listUsersChatNumbers.Add(ipBytes[4]);
+                listUsersChatNumbers.Add(chatNumber);
             }
             else
             {
                 int indexElement = listUsersIp.IndexOf(ip);
-                listUsersChatNumbers[indexElement] = ipBytes[4];
+                listUsersChatNumbers[indexElement] = chatNumber;
             }
             UpdateUsers();
         }     
@@ -239,7 +232,7 @@ namespace VideoChat
         {
             listUsersIp.Clear();
             listUsersChatNumbers.Clear();
-            SetRequestAboutNewUser(GetInfo, broadcast);
+            SetRequestAboutNewUser((byte)FlagsRequest.FGetInfo, broadcast);
         }
         private void SetMyChatNumber()
         {
@@ -251,10 +244,10 @@ namespace VideoChat
             {
                 myNumber++;
             }
-            myChatNumber = myNumber;
+            myChatNumber = myNumber % 256;
             for (int i = 0; i < listUsersIp.Count; i++)
             {
-                SetRequestAboutNewUser(SetInfo, listUsersIp[i]);
+                SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, listUsersIp[i]);
             }
             sendVideo.MyChatNumber = myNumber;
         }
@@ -274,7 +267,7 @@ namespace VideoChat
         {
             for(int i = 0; i < listUsersIp.Count; i++)
             {
-                SetRequestAboutNewUser(4, listUsersIp[i]);
+                SetRequestAboutNewUser((byte)FlagsRequest.FRemoveUser, listUsersIp[i]);
             }
             AbortGroup();
         }

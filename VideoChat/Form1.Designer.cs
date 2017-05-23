@@ -31,7 +31,6 @@
             this.pb_Video = new System.Windows.Forms.PictureBox();
             this.gb_standartButtons = new System.Windows.Forms.GroupBox();
             this.btn_Abort_Call_Group = new System.Windows.Forms.Button();
-            this.tb_Call_IP = new System.Windows.Forms.TextBox();
             this.btn_Call = new System.Windows.Forms.Button();
             this.cb_Users = new System.Windows.Forms.ComboBox();
             this.btnGetListUsers = new System.Windows.Forms.Button();
@@ -56,7 +55,6 @@
             // gb_standartButtons
             // 
             this.gb_standartButtons.Controls.Add(this.btn_Abort_Call_Group);
-            this.gb_standartButtons.Controls.Add(this.tb_Call_IP);
             this.gb_standartButtons.Controls.Add(this.btn_Call);
             this.gb_standartButtons.Controls.Add(this.cb_Users);
             this.gb_standartButtons.Controls.Add(this.btnGetListUsers);
@@ -68,24 +66,17 @@
             // 
             // btn_Abort_Call_Group
             // 
-            this.btn_Abort_Call_Group.Location = new System.Drawing.Point(594, 3);
+            this.btn_Abort_Call_Group.Location = new System.Drawing.Point(487, 56);
             this.btn_Abort_Call_Group.Name = "btn_Abort_Call_Group";
-            this.btn_Abort_Call_Group.Size = new System.Drawing.Size(105, 85);
+            this.btn_Abort_Call_Group.Size = new System.Drawing.Size(176, 37);
             this.btn_Abort_Call_Group.TabIndex = 8;
             this.btn_Abort_Call_Group.Text = "Abort";
             this.btn_Abort_Call_Group.UseVisualStyleBackColor = true;
             this.btn_Abort_Call_Group.Click += new System.EventHandler(this.btn_Abort_Call_Group_Click);
             // 
-            // tb_Call_IP
-            // 
-            this.tb_Call_IP.Location = new System.Drawing.Point(399, 56);
-            this.tb_Call_IP.Name = "tb_Call_IP";
-            this.tb_Call_IP.Size = new System.Drawing.Size(176, 29);
-            this.tb_Call_IP.TabIndex = 7;
-            // 
             // btn_Call
             // 
-            this.btn_Call.Location = new System.Drawing.Point(399, 3);
+            this.btn_Call.Location = new System.Drawing.Point(487, 9);
             this.btn_Call.Name = "btn_Call";
             this.btn_Call.Size = new System.Drawing.Size(176, 38);
             this.btn_Call.TabIndex = 6;
@@ -96,17 +87,17 @@
             // cb_Users
             // 
             this.cb_Users.FormattingEnabled = true;
-            this.cb_Users.Location = new System.Drawing.Point(138, 55);
+            this.cb_Users.Location = new System.Drawing.Point(187, 61);
             this.cb_Users.Name = "cb_Users";
-            this.cb_Users.Size = new System.Drawing.Size(231, 29);
+            this.cb_Users.Size = new System.Drawing.Size(271, 29);
             this.cb_Users.TabIndex = 4;
             // 
             // btnGetListUsers
             // 
-            this.btnGetListUsers.Location = new System.Drawing.Point(138, 3);
+            this.btnGetListUsers.Location = new System.Drawing.Point(187, 9);
             this.btnGetListUsers.Margin = new System.Windows.Forms.Padding(4);
             this.btnGetListUsers.Name = "btnGetListUsers";
-            this.btnGetListUsers.Size = new System.Drawing.Size(231, 38);
+            this.btnGetListUsers.Size = new System.Drawing.Size(271, 38);
             this.btnGetListUsers.TabIndex = 5;
             this.btnGetListUsers.Text = "Get list users";
             this.btnGetListUsers.UseVisualStyleBackColor = true;
@@ -166,7 +157,6 @@
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pb_Video)).EndInit();
             this.gb_standartButtons.ResumeLayout(false);
-            this.gb_standartButtons.PerformLayout();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
@@ -185,7 +175,6 @@
         private System.Windows.Forms.ToolStripMenuItem cameraToolStripMenuItem;
         private System.Windows.Forms.ToolStripComboBox tS_CB_Cameras;
         private System.Windows.Forms.Button btn_Call;
-        private System.Windows.Forms.TextBox tb_Call_IP;
         private System.Windows.Forms.Button btn_Abort_Call_Group;
     }
 }
