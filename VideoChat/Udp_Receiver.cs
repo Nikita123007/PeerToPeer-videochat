@@ -8,21 +8,28 @@ using System.Net.Sockets;
 
 namespace VideoChat
 {
-    class Udp_Client : IDisposable
+    class Udp_Receiver : IDisposable
     {
         private Socket socket;
         private IPEndPoint endPoint;
-        private string ipAddress = "127.0.0.1";
-
-        public Udp_Client(int port)
+        private string ipAddress;
+        
+        public int Timeout
         {
-            CreateNew(port);
+            set
+            {
+                socket.ReceiveTimeout = value;
+            }
         }
-        public void CreateNew(int port)
+
+        public void resetTimeout()
+        {
+            socket.ReceiveTimeout = 0;
+        }
+        public Udp_Receiver(int port)
         {
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            //Host = Dns.GetHostName();
-            //ipAddress = Dns.GetHostByName(Host).AddressList[0].ToString();
+            ipAddress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0].ToString();
             endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
             socket.Bind(endPoint);
         }

@@ -9,7 +9,7 @@ using System.Windows.Forms;
 
 namespace VideoChat
 {
-    class Udp_Server : IDisposable
+    class Udp_Sender : IDisposable
     {
         private Socket socket;
         private IPEndPoint endPoint;
@@ -22,7 +22,7 @@ namespace VideoChat
             }
         }
 
-        public Udp_Server()
+        public Udp_Sender()
         {
             connected = false;
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -56,7 +56,7 @@ namespace VideoChat
             }
             catch (Exception error)
             {
-                MessageBox.Show(error.ToString());
+                
             }
         }
         public void Close()
