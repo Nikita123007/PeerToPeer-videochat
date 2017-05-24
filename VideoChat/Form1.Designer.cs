@@ -38,6 +38,8 @@
             this.settingsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.cameraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tS_CB_Cameras = new System.Windows.Forms.ToolStripComboBox();
+            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pb_Video)).BeginInit();
             this.gb_standartButtons.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -54,6 +56,8 @@
             // 
             // gb_standartButtons
             // 
+            this.gb_standartButtons.Controls.Add(this.button2);
+            this.gb_standartButtons.Controls.Add(this.button1);
             this.gb_standartButtons.Controls.Add(this.btn_Abort_Call_Group);
             this.gb_standartButtons.Controls.Add(this.btn_Call);
             this.gb_standartButtons.Controls.Add(this.cb_Users);
@@ -136,6 +140,28 @@
             this.tS_CB_Cameras.Name = "tS_CB_Cameras";
             this.tS_CB_Cameras.Size = new System.Drawing.Size(220, 29);
             // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(670, 9);
+            this.button1.Margin = new System.Windows.Forms.Padding(4);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(184, 38);
+            this.button1.TabIndex = 9;
+            this.button1.Text = "Set my chat number";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // button2
+            // 
+            this.button2.Location = new System.Drawing.Point(670, 55);
+            this.button2.Margin = new System.Windows.Forms.Padding(4);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(184, 38);
+            this.button2.TabIndex = 10;
+            this.button2.Text = "Update list users";
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 21F);
@@ -176,6 +202,8 @@
         private System.Windows.Forms.ToolStripComboBox tS_CB_Cameras;
         private System.Windows.Forms.Button btn_Call;
         private System.Windows.Forms.Button btn_Abort_Call_Group;
+        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button button2;
     }
 }
 

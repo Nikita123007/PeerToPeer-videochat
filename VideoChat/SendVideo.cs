@@ -80,7 +80,7 @@ namespace VideoChat
             {
                 if (listCurrentUsersIp.Count != 0)
                 {
-                    picture = ReSizeBitmap(picture, pb_Video.Width / listCurrentUsersIp.Count, pb_Video.Height);
+                    picture = ReSizeBitmap(picture, pb_Video.Width / listCurrentUsersIp.Count / 8, pb_Video.Height);
                     byte[] pictureInByte = ImageToByteArray(picture);
                     for (int i = 0; i < listCurrentUsersIp.Count; i++)
                     {
@@ -88,7 +88,6 @@ namespace VideoChat
                     }
                 }
             }
-            //pb_Video.Image = ReSizeBitmap(picture, pb_Video.Width, pb_Video.Height);
         }
         private void SendBytesForUdp(Udp_Sender udp_Server, byte[] data, string ip)
         {
@@ -99,11 +98,13 @@ namespace VideoChat
             {
                 try
                 {
+                    sendData[lengthDgram - 2] = (byte)myChatNumber;
                     while (pointer < data.Length)
                     {
-                        sendData[lengthDgram - 2] = (byte)myChatNumber;
-                        if(pointer == 0)
+                        if (pointer == 0)
                             sendData[lengthDgram - 1] = 1;
+                        else
+                            sendData[lengthDgram - 1] = 0;
                         for (int index = 0; index < lengthDgram - 2; index++)
                         {
                             if (pointer < data.Length)
@@ -146,7 +147,7 @@ namespace VideoChat
         }
         private Bitmap ReSizeBitmap(Bitmap source, int width, int height)
         {
-            double relationSource = (double)source.Width / (double)source.Height;
+            /*double relationSource = (double)source.Width / (double)source.Height;
             double relationDest = (double)width / (double)height;
             if (relationSource > relationDest)
             {
@@ -159,7 +160,8 @@ namespace VideoChat
             else
             {
                 return new Bitmap(source, width, height);
-            }
+            }*/
+            return new Bitmap(source, width, source.Height * width / source.Width);
         }
         public bool RemoveUser(string ip)
         {
@@ -167,9 +169,7 @@ namespace VideoChat
             {
                 if (listCurrentUsersIp.Contains(ip))
                 {
-                    //StopSendVideo();
                     listCurrentUsersIp.Remove(ip);
-                    //StartSendVideo();
                     return true;
                 }
                 else
@@ -184,9 +184,7 @@ namespace VideoChat
             {
                 if (!listCurrentUsersIp.Contains(ip))
                 {
-                    //StopSendVideo();
                     listCurrentUsersIp.Add(ip);
-                    //StartSendVideo();
                     return true;
                 }
                 else

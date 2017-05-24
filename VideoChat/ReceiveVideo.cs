@@ -19,7 +19,7 @@ namespace VideoChat
         private List<int> listCurrentUsersChatNumbers;
         private const int startPortsUsers = 9010;
         private Dictionary<int, Queue<byte[]>> QueuesUsersPackage;
-        private const int MaxPackagesOnOneImage = 10;
+        private const int MaxPackagesOnOneImage = 5;
 
         public List<int> ListCurrentUsersChatNumbers
         {
@@ -45,7 +45,7 @@ namespace VideoChat
             udp_Receiver = new Udp_Receiver(startPortsUsers);
             ListCurrentUsersChatNumbers = new List<int>();
             Pb_Video = pb_Video;
-            threadReceiveVideo = new Thread(new ParameterizedThreadStart(ReseiveDataOfImages));
+            threadReceiveVideo = new Thread(ReseiveDataOfImages);
             InitialiseQueues();
         }
         private void InitialiseQueues()
@@ -64,7 +64,7 @@ namespace VideoChat
             }
         }
 
-        private void ReseiveDataOfImages(object sender)
+        private void ReseiveDataOfImages()
         {
             udp_Receiver.Timeout = 500;
             while (true)
@@ -85,7 +85,7 @@ namespace VideoChat
             if (QueuesUsersPackage[userNumber].Count > MaxPackagesOnOneImage)
             {
                 int pointer = 0;
-                byte[] imageInBytes = new byte[lengthDgram * MaxPackagesOnOneImage];
+                byte[] imageInBytes = new byte[lengthDgram * MaxPackagesOnOneImage + 1];
                 byte[] currentPackage = QueuesUsersPackage[userNumber].Dequeue();
                 if (currentPackage[lengthDgram - 1] == 1)
                 {
@@ -184,10 +184,8 @@ namespace VideoChat
             {
                 if (listCurrentUsersChatNumbers.Contains(userChatNumber))
                 {
-                    //StopReceiveVideo();
                     listCurrentUsersChatNumbers.Remove(userChatNumber);
                     QueuesUsersPackage.Remove(userChatNumber);
-                    //StartReceiveVideo();
                     return true;
                 }
                 else
@@ -202,10 +200,8 @@ namespace VideoChat
             {
                 if (!listCurrentUsersChatNumbers.Contains(userChatNumber))
                 {
-                    //StopReceiveVideo();
                     listCurrentUsersChatNumbers.Add(userChatNumber);
                     QueuesUsersPackage.Add(userChatNumber, new Queue<byte[]>());
-                    //StartReceiveVideo();
                     return true;
                 }
                 else

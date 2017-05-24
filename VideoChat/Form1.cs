@@ -76,7 +76,7 @@ namespace VideoChat
             sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, myChatNumber, pb_Video);
             receiveVideo = new ReceiveVideo(pb_Video);
         }
-        private void SetRequestAboutNewUser(byte cancelFlag, string ip)
+        private void SetRequestAboutNewUser(FlagsRequest cancelFlag, string ip)
         {
             string ipAddress = GetHostIP();
             byte[] request = new byte[6];
@@ -114,33 +114,33 @@ namespace VideoChat
                     byte[] ipBytes = RequestsFromNewUser.ReceiveTo(6);
                     string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
                     int chatNumber = ipBytes[4];
-                    int requestNumber = ipBytes[5];
+                    FlagsRequest request = (FlagsRequest)ipBytes[5];
                     lastGetChatNumber = chatNumber;
-                    if (chatNumber == 0)
+                    if ((chatNumber == 0) || (ip == GetHostIP()))
                         continue;
-                    if (requestNumber == (byte)FlagsRequest.FSetInfo)
+                    if (request == FlagsRequest.FSetInfo)
                     {
                         AddUserIpAndChatNumber(ip, chatNumber);
                     }
-                    if (requestNumber == (byte)FlagsRequest.FGetInfo)
+                    if (request == FlagsRequest.FGetInfo)
                     {
                         SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
                         AddUserIpAndChatNumber(ip, chatNumber);
                     }
-                    if (requestNumber == (byte)FlagsRequest.FTrySetUser)
+                    if (request == FlagsRequest.FTrySetUser)
                     {
                         if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                         {
-                            SetRequestAboutNewUser((byte)FlagsRequest.FAddUser, ip);
+                            SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
                             AddUserIpAndChatNumber(ip, chatNumber);
                             AddNewUserInGroup(ip, chatNumber);
                         }
                     }
-                    if (requestNumber == (byte)FlagsRequest.FAddUser)
+                    if (request == FlagsRequest.FAddUser)
                     {
                         AddNewUserInGroup(ip, chatNumber);
                     }
-                    if (requestNumber == (byte)FlagsRequest.FRemoveUser)
+                    if (request == FlagsRequest.FRemoveUser)
                     {
                         RemoveUserWithGroup(ip, chatNumber);
                     }
@@ -191,7 +191,6 @@ namespace VideoChat
                 int indexElement = listUsersIp.IndexOf(ip);
                 listUsersChatNumbers[indexElement] = chatNumber;
             }
-            UpdateUsers();
         }     
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -232,7 +231,7 @@ namespace VideoChat
         {
             listUsersIp.Clear();
             listUsersChatNumbers.Clear();
-            SetRequestAboutNewUser((byte)FlagsRequest.FGetInfo, broadcast);
+            SetRequestAboutNewUser(FlagsRequest.FGetInfo, broadcast);
         }
         private void SetMyChatNumber()
         {
@@ -256,20 +255,31 @@ namespace VideoChat
             string callUserIp = "";
             lock (cb_Users)
             {
-                callUserIp = listUsersIp[cb_Users.SelectedIndex];
+                if ((cb_Users.Items != null) && (cb_Users.Items.Count != 0) && (cb_Users.SelectedIndex != -1))
+                    callUserIp = listUsersIp[cb_Users.SelectedIndex];
             }
             if (callUserIp != "")
             {
-                SetRequestAboutNewUser(2, callUserIp);
+                SetRequestAboutNewUser(FlagsRequest.FTrySetUser, callUserIp);
             }
         }
         private void btn_Abort_Call_Group_Click(object sender, EventArgs e)
         {
             for(int i = 0; i < listUsersIp.Count; i++)
             {
-                SetRequestAboutNewUser((byte)FlagsRequest.FRemoveUser, listUsersIp[i]);
+                SetRequestAboutNewUser(FlagsRequest.FRemoveUser, listUsersIp[i]);
             }
             AbortGroup();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            SetMyChatNumber();
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            UpdateUsers();
         }
     }
 }
