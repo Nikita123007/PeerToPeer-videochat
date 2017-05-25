@@ -15,11 +15,8 @@ namespace VideoChat
         private Udp_Receiver udp_Receiver;
         private Thread threadReceiveVideo;
         private PictureBox pb_Video;
-        private const int lengthDgram = 65500;
         private List<int> listCurrentUsersChatNumbers;
-        private const int startPortsUsers = 9010;
         private Dictionary<int, Queue<byte[]>> QueuesUsersPackage;
-        private const int MaxPackagesOnOneImage = 5;
 
         public List<int> ListCurrentUsersChatNumbers
         {
@@ -42,7 +39,7 @@ namespace VideoChat
         }
         public void StartInitialise(PictureBox pb_Video)
         {
-            udp_Receiver = new Udp_Receiver(startPortsUsers);
+            udp_Receiver = new Udp_Receiver(Defines.startPortsUsers);
             ListCurrentUsersChatNumbers = new List<int>();
             Pb_Video = pb_Video;
             threadReceiveVideo = new Thread(ReseiveDataOfImages);
@@ -69,35 +66,35 @@ namespace VideoChat
             udp_Receiver.Timeout = 500;
             while (true)
             {
-                byte[] userPackage = udp_Receiver.ReceiveTo(lengthDgram);
+                byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
                 lock (listCurrentUsersChatNumbers)
                 {
-                    if (QueuesUsersPackage.ContainsKey(userPackage[lengthDgram - 2]))
+                    if (QueuesUsersPackage.ContainsKey(userPackage[Defines.lengthDgram - 2]))
                     {
-                        QueuesUsersPackage[userPackage[lengthDgram - 2]].Enqueue(userPackage);
-                        TryGetImageUser(userPackage[lengthDgram - 2]);
+                        QueuesUsersPackage[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
+                        TryGetImageUser(userPackage[Defines.lengthDgram - 2]);
                     }
                 }
             }
         }
         private void TryGetImageUser(byte userNumber)
         {
-            if (QueuesUsersPackage[userNumber].Count > MaxPackagesOnOneImage)
+            if (QueuesUsersPackage[userNumber].Count > Defines.MaxPackagesOnOneImage)
             {
                 int pointer = 0;
-                byte[] imageInBytes = new byte[lengthDgram * MaxPackagesOnOneImage + 1];
+                byte[] imageInBytes = new byte[Defines.lengthDgram * Defines.MaxPackagesOnOneImage + 1];
                 byte[] currentPackage = QueuesUsersPackage[userNumber].Dequeue();
-                if (currentPackage[lengthDgram - 1] == 1)
+                if (currentPackage[Defines.lengthDgram - 1] == 1)
                 {
-                    for (int i = 0; i < lengthDgram - 2; i++)
+                    for (int i = 0; i < Defines.lengthDgram - 2; i++)
                     {
                         imageInBytes[pointer] = currentPackage[i];
                         pointer++;
                     }
-                    while ((QueuesUsersPackage[userNumber].Count > 0) && (QueuesUsersPackage[userNumber].Peek()[lengthDgram - 1] == 0))
+                    while ((QueuesUsersPackage[userNumber].Count > 0) && (QueuesUsersPackage[userNumber].Peek()[Defines.lengthDgram - 1] == 0))
                     {
                         currentPackage = QueuesUsersPackage[userNumber].Dequeue();
-                        for (int i = 0; i < lengthDgram - 2; i++)
+                        for (int i = 0; i < Defines.lengthDgram - 2; i++)
                         {
                             imageInBytes[pointer] = currentPackage[i];
                             pointer++;

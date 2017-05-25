@@ -31,6 +31,7 @@ namespace VideoChat
             socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             ipAddress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0].ToString();
             endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
+            socket.ReceiveBufferSize = Defines.lengthDgram * 3;
             socket.Bind(endPoint);
         }
         public byte[] ReceiveTo(int lengthDgram)

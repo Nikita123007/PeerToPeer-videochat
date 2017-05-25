@@ -17,11 +17,6 @@ namespace VideoChat
 {
     public partial class Form1 : Form
     {
-        // const               
-        private const int portRequestNewUser = 9002;
-        private const string broadcast = "255.255.255.255";
-        // const
-
         private SendVideo sendVideo;
         private FilterInfoCollection videoCaptureDiveses;              
         private Udp_Receiver RequestsFromNewUser;
@@ -70,7 +65,7 @@ namespace VideoChat
             listUsersIp = new List<string>();
             threadGetRequests = new Thread(GetRequest);
             RequestAboutNewUser = new Udp_Sender();
-            RequestsFromNewUser = new Udp_Receiver(portRequestNewUser);
+            RequestsFromNewUser = new Udp_Receiver(Defines.portRequestNewUser);
             imageSize = new Point(0, 0);
             listUsersChatNumbers = new List<int>();
             sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, myChatNumber, pb_Video);
@@ -86,7 +81,7 @@ namespace VideoChat
             request[3] = (byte)GetNumberOfIp(ipAddress, 4);
             request[4] = (byte)myChatNumber;
             request[request.Length - 1] = (byte)cancelFlag;
-            RequestAboutNewUser.Connect(ip, portRequestNewUser);
+            RequestAboutNewUser.Connect(ip, Defines.portRequestNewUser);
             if (RequestAboutNewUser.Connected)
             {
                 RequestAboutNewUser.SendTo(request);
@@ -231,7 +226,7 @@ namespace VideoChat
         {
             listUsersIp.Clear();
             listUsersChatNumbers.Clear();
-            SetRequestAboutNewUser(FlagsRequest.FGetInfo, broadcast);
+            SetRequestAboutNewUser(FlagsRequest.FGetInfo, Defines.broadcast);
         }
         private void SetMyChatNumber()
         {

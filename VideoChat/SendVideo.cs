@@ -12,9 +12,7 @@ using System.IO;
 namespace VideoChat
 {
     class SendVideo
-    {
-        private const int lengthDgram = 65500;
-        private const int startPortsUsers = 9010;
+    {      
         private VideoCaptureDevice finalVideo;
         private List<string> listCurrentUsersIp;
         private int myChatNumber;
@@ -75,12 +73,13 @@ namespace VideoChat
         }
         private void FinalVideo_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
-            Bitmap picture = (Bitmap)eventArgs.Frame.Clone();
             lock (listCurrentUsersIp)
             {
                 if (listCurrentUsersIp.Count != 0)
                 {
-                    picture = ReSizeBitmap(picture, pb_Video.Width / listCurrentUsersIp.Count / 8, pb_Video.Height);
+                    /*Bitmap picture = (Bitmap)eventArgs.Frame.Clone();
+                    picture = ReSizeBitmap(picture, pb_Video.Width / listCurrentUsersIp.Count / 8, pb_Video.Height);*/
+                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / 6, pb_Video.Height);
                     byte[] pictureInByte = ImageToByteArray(picture);
                     for (int i = 0; i < listCurrentUsersIp.Count; i++)
                     {
@@ -91,33 +90,42 @@ namespace VideoChat
         }
         private void SendBytesForUdp(Udp_Sender udp_Server, byte[] data, string ip)
         {
-            byte[] sendData = new byte[lengthDgram];
+            byte[] sendData = new byte[Defines.lengthDgram];
             int pointer = 0;
-            udp_Server.Connect(ip, startPortsUsers);
+            udp_Server.Connect(ip, Defines.startPortsUsers);
             if (udp_Server.Connected)
             {
                 try
                 {
-                    sendData[lengthDgram - 2] = (byte)myChatNumber;
-                    while (pointer < data.Length)
+                    sendData[Defines.lengthDgram - 2] = (byte)myChatNumber;
+                    if (data.Length <= (Defines.lengthDgram - 2))
                     {
-                        if (pointer == 0)
-                            sendData[lengthDgram - 1] = 1;
-                        else
-                            sendData[lengthDgram - 1] = 0;
-                        for (int index = 0; index < lengthDgram - 2; index++)
-                        {
-                            if (pointer < data.Length)
-                            {
-                                sendData[index] = data[pointer];
-                                pointer++;
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
+                        data.CopyTo(sendData, 0);
+                        sendData[Defines.lengthDgram - 1] = 1;
                         udp_Server.SendTo(sendData);
+                    }
+                    else
+                    {
+                        while (pointer < data.Length)
+                        {
+                            if (pointer == 0)
+                                sendData[Defines.lengthDgram - 1] = 1;
+                            else
+                                sendData[Defines.lengthDgram - 1] = 0;
+                            for (int index = 0; index < Defines.lengthDgram - 2; index++)
+                            {
+                                if (pointer < data.Length)
+                                {
+                                    sendData[index] = data[pointer];
+                                    pointer++;
+                                }
+                                else
+                                {
+                                    break;
+                                }
+                            }
+                            udp_Server.SendTo(sendData);
+                        }
                     }
                 }
                 catch (Exception error)
