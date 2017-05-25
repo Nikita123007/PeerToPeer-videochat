@@ -63,16 +63,18 @@ namespace VideoChat
 
         private void ReseiveDataOfImages()
         {
-            udp_Receiver.Timeout = 500;
             while (true)
             {
-                byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
-                lock (listCurrentUsersChatNumbers)
+                if (udp_Receiver.AvailableData() >= Defines.lengthDgram)
                 {
-                    if (QueuesUsersPackage.ContainsKey(userPackage[Defines.lengthDgram - 2]))
+                    byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
+                    lock (listCurrentUsersChatNumbers)
                     {
-                        QueuesUsersPackage[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
-                        TryGetImageUser(userPackage[Defines.lengthDgram - 2]);
+                        if (QueuesUsersPackage.ContainsKey(userPackage[Defines.lengthDgram - 2]))
+                        {
+                            QueuesUsersPackage[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
+                            TryGetImageUser(userPackage[Defines.lengthDgram - 2]);
+                        }
                     }
                 }
             }

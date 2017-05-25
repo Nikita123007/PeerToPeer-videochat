@@ -32,6 +32,7 @@ namespace VideoChat
             ipAddress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0].ToString();
             endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
             socket.ReceiveBufferSize = Defines.lengthDgram * 3;
+            socket.ReceiveTimeout = Defines.ReceiveTimeout;
             socket.Bind(endPoint);
         }
         public byte[] ReceiveTo(int lengthDgram)
@@ -45,6 +46,10 @@ namespace VideoChat
             {
             }
             return data;
+        }
+        public int AvailableData()
+        {
+            return socket.Available;
         }
         public void Close()
         {

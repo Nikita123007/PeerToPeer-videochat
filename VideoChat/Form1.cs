@@ -27,7 +27,7 @@ namespace VideoChat
         private List<int> listUsersChatNumbers;
         private Point imageSize;
         private ReceiveVideo receiveVideo;
-        private int lastGetChatNumber = 0;
+        private bool flagGetRequests;
 
         public Form1()
         {
@@ -62,6 +62,7 @@ namespace VideoChat
         private void BeginInitializeParams()
         {
             myChatNumber = 1;
+            flagGetRequests = false;
             listUsersIp = new List<string>();
             threadGetRequests = new Thread(GetRequest);
             RequestAboutNewUser = new Udp_Sender();
@@ -103,46 +104,53 @@ namespace VideoChat
         {
             try
             {
-                RequestsFromNewUser.Timeout = 500;
                 while (true)
                 {
-                    byte[] ipBytes = RequestsFromNewUser.ReceiveTo(6);
-                    string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
-                    int chatNumber = ipBytes[4];
-                    FlagsRequest request = (FlagsRequest)ipBytes[5];
-                    lastGetChatNumber = chatNumber;
-                    if ((chatNumber == 0) || (ip == GetHostIP()))
-                        continue;
-                    if (request == FlagsRequest.FSetInfo)
+                    if (RequestsFromNewUser.AvailableData() >= 6)
                     {
-                        AddUserIpAndChatNumber(ip, chatNumber);
-                    }
-                    if (request == FlagsRequest.FGetInfo)
-                    {
-                        SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
-                        AddUserIpAndChatNumber(ip, chatNumber);
-                    }
-                    if (request == FlagsRequest.FTrySetUser)
-                    {
-                        if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
+                        byte[] ipBytes = RequestsFromNewUser.ReceiveTo(6);
+                        flagGetRequests = true;
+                        string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
+                        int chatNumber = ipBytes[4];
+                        FlagsRequest request = (FlagsRequest)ipBytes[5];
+                        if ((chatNumber == 0) || (ip == GetHostIP()))
+                            continue;
+                        if (request == FlagsRequest.FSetInfo)
                         {
-                            SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
                             AddUserIpAndChatNumber(ip, chatNumber);
+                        }
+                        if (request == FlagsRequest.FGetInfo)
+                        {
+                            SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
+                            AddUserIpAndChatNumber(ip, chatNumber);
+                        }
+                        if (request == FlagsRequest.FTrySetUser)
+                        {
+                            if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
+                            {
+                                SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
+                                AddUserIpAndChatNumber(ip, chatNumber);
+                                AddNewUserInGroup(ip, chatNumber);
+                            }
+                        }
+                        if (request == FlagsRequest.FAddUser)
+                        {
                             AddNewUserInGroup(ip, chatNumber);
                         }
+                        if (request == FlagsRequest.FRemoveUser)
+                        {
+                            RemoveUserWithGroup(ip, chatNumber);
+                        }
                     }
-                    if (request == FlagsRequest.FAddUser)
+                    else
                     {
-                        AddNewUserInGroup(ip, chatNumber);
-                    }
-                    if (request == FlagsRequest.FRemoveUser)
-                    {
-                        RemoveUserWithGroup(ip, chatNumber);
+                        flagGetRequests = false;
                     }
                 }
             }
             catch(Exception error)
             {
+                MessageBox.Show(error.Message);
             }
         }
         private void RemoveUserWithGroup(string ip, int chatNumber)
@@ -232,7 +240,7 @@ namespace VideoChat
         {
             UpdateListUsers();
             Thread.Sleep(1000);
-            while (lastGetChatNumber != 0);
+            while (flagGetRequests);
             int myNumber = 1;
             while (listUsersChatNumbers.Contains(myNumber))
             {

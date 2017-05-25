@@ -13,5 +13,6 @@ namespace VideoChat
         public static int portRequestNewUser = 9002;
         public static string broadcast = "255.255.255.255";
         public static int MaxPackagesOnOneImage = 5;
+        public static int ReceiveTimeout = 300;
     }
 }
