@@ -8,6 +8,7 @@ using AForge.Video;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
+using System.Threading;
 
 namespace VideoChat
 {
@@ -19,6 +20,8 @@ namespace VideoChat
         private PictureBox pb_Video;
         private Udp_Sender udp_Sender;
         private string monikerStringVideo;
+        private AutoResetEvent nextEventThread;
+        private AutoResetEvent thisEventThread;
 
 
         public int MyChatNumber
@@ -52,17 +55,15 @@ namespace VideoChat
             }
         }
 
-        public SendVideo(string monikerStringVideo, int myChatNumber, PictureBox pb_Video)
-        {
-            StartInitialise(monikerStringVideo, myChatNumber, pb_Video);
-        }
-        public void StartInitialise(string monikerStringVideo, int myChatNumber, PictureBox pb_Video)
+        public SendVideo(string monikerStringVideo, int myChatNumber, PictureBox pb_Video, AutoResetEvent nextEventThread, AutoResetEvent thisEventThread)
         {
             udp_Sender = new Udp_Sender();
             Pb_Video = pb_Video;
             MyChatNumber = myChatNumber;
             ListCurrentUsersIp = new List<string>();
             MonikerStringVideo = monikerStringVideo;
+            this.nextEventThread = nextEventThread;
+            this.thisEventThread = thisEventThread;
         }
         public void StartSendVideo()
         {
@@ -73,13 +74,13 @@ namespace VideoChat
         }
         private void FinalVideo_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
+            thisEventThread.WaitOne();
             lock (listCurrentUsersIp)
             {
+                nextEventThread.Set();
                 if (listCurrentUsersIp.Count != 0)
                 {
-                    /*Bitmap picture = (Bitmap)eventArgs.Frame.Clone();
-                    picture = ReSizeBitmap(picture, pb_Video.Width / listCurrentUsersIp.Count / 8, pb_Video.Height);*/
-                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / 6, pb_Video.Height);
+                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / 5, eventArgs.Frame.Height * (pb_Video.Width / listCurrentUsersIp.Count / 5) / eventArgs.Frame.Width);
                     byte[] pictureInByte = ImageToByteArray(picture);
                     for (int i = 0; i < listCurrentUsersIp.Count; i++)
                     {
@@ -102,7 +103,9 @@ namespace VideoChat
                     {
                         data.CopyTo(sendData, 0);
                         sendData[Defines.lengthDgram - 1] = 1;
+                        thisEventThread.WaitOne();
                         udp_Server.SendTo(sendData);
+                        nextEventThread.Set();
                     }
                     else
                     {
@@ -124,7 +127,9 @@ namespace VideoChat
                                     break;
                                 }
                             }
+                            thisEventThread.WaitOne();
                             udp_Server.SendTo(sendData);
+                            nextEventThread.Set();
                         }
                     }
                 }

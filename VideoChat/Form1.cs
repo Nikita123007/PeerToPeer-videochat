@@ -28,6 +28,9 @@ namespace VideoChat
         private Point imageSize;
         private ReceiveVideo receiveVideo;
         private bool flagGetRequests;
+        private AutoResetEvent eventThreadGetRequests;
+        private AutoResetEvent eventThreadSendVideo;
+        private AutoResetEvent eventThreadReceiveVideo;
 
         public Form1()
         {
@@ -38,9 +41,10 @@ namespace VideoChat
             SettingCamera();
             BeginInitializeParams();
             StartGetRequest();
-            SetMyChatNumber();
             StartReceiveVideo();
             StartSendVideo();
+            eventThreadGetRequests.Set();
+            SetMyChatNumber();
         }
         private void StartReceiveVideo()
         {           
@@ -53,24 +57,38 @@ namespace VideoChat
         private void SettingCamera()
         {
             videoCaptureDiveses = new FilterInfoCollection(FilterCategory.VideoInputDevice);
+            tS_CB_Cameras.Items.Clear();
             foreach (FilterInfo videoCaptureDevice in videoCaptureDiveses)
             {
                 tS_CB_Cameras.Items.Add(videoCaptureDevice.Name);
             }
-            tS_CB_Cameras.SelectedIndex = 0;
+            if (tS_CB_Cameras.Items.Count != 0)
+            {
+                tS_CB_Cameras.SelectedIndex = 0;
+            }
         }
         private void BeginInitializeParams()
         {
             myChatNumber = 1;
             flagGetRequests = false;
+            eventThreadGetRequests = new AutoResetEvent(false);
+            eventThreadSendVideo = new AutoResetEvent(false);
+            eventThreadReceiveVideo = new AutoResetEvent(false);
             listUsersIp = new List<string>();
             threadGetRequests = new Thread(GetRequest);
             RequestAboutNewUser = new Udp_Sender();
             RequestsFromNewUser = new Udp_Receiver(Defines.portRequestNewUser);
             imageSize = new Point(0, 0);
             listUsersChatNumbers = new List<int>();
-            sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, myChatNumber, pb_Video);
-            receiveVideo = new ReceiveVideo(pb_Video);
+            if (tS_CB_Cameras.SelectedIndex != -1)
+            {
+                sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, myChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+            }
+            else
+            {
+                sendVideo = new SendVideo("default", myChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+            }
+            receiveVideo = new ReceiveVideo(pb_Video, eventThreadGetRequests, eventThreadReceiveVideo);          
         }
         private void SetRequestAboutNewUser(FlagsRequest cancelFlag, string ip)
         {
@@ -102,55 +120,52 @@ namespace VideoChat
         }
         private void GetRequest()
         {
-            try
+            while (true)
             {
-                while (true)
+                eventThreadGetRequests.WaitOne();
+                eventThreadSendVideo.Set();
+                if (RequestsFromNewUser.AvailableData() >= 6)
                 {
-                    if (RequestsFromNewUser.AvailableData() >= 6)
+                    byte[] ipBytes = RequestsFromNewUser.ReceiveTo(6);
+                    flagGetRequests = true;
+                    string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
+                    int chatNumber = ipBytes[4];
+                    FlagsRequest request = (FlagsRequest)ipBytes[5];
+                    if ((chatNumber == 0) || (ip == GetHostIP()))
                     {
-                        byte[] ipBytes = RequestsFromNewUser.ReceiveTo(6);
-                        flagGetRequests = true;
-                        string ip = ipBytes[0].ToString() + "." + ipBytes[1].ToString() + "." + ipBytes[2].ToString() + "." + ipBytes[3].ToString();
-                        int chatNumber = ipBytes[4];
-                        FlagsRequest request = (FlagsRequest)ipBytes[5];
-                        if ((chatNumber == 0) || (ip == GetHostIP()))
-                            continue;
-                        if (request == FlagsRequest.FSetInfo)
+                        continue;
+                    }
+                    if (request == FlagsRequest.FSetInfo)
+                    {
+                        AddUserIpAndChatNumber(ip, chatNumber);
+                    }
+                    if (request == FlagsRequest.FGetInfo)
+                    {
+                        SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
+                        AddUserIpAndChatNumber(ip, chatNumber);
+                    }
+                    if (request == FlagsRequest.FTrySetUser)
+                    {
+                        if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                         {
+                            SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
                             AddUserIpAndChatNumber(ip, chatNumber);
-                        }
-                        if (request == FlagsRequest.FGetInfo)
-                        {
-                            SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
-                            AddUserIpAndChatNumber(ip, chatNumber);
-                        }
-                        if (request == FlagsRequest.FTrySetUser)
-                        {
-                            if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
-                            {
-                                SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
-                                AddUserIpAndChatNumber(ip, chatNumber);
-                                AddNewUserInGroup(ip, chatNumber);
-                            }
-                        }
-                        if (request == FlagsRequest.FAddUser)
-                        {
                             AddNewUserInGroup(ip, chatNumber);
                         }
-                        if (request == FlagsRequest.FRemoveUser)
-                        {
-                            RemoveUserWithGroup(ip, chatNumber);
-                        }
                     }
-                    else
+                    if (request == FlagsRequest.FAddUser)
                     {
-                        flagGetRequests = false;
+                        AddNewUserInGroup(ip, chatNumber);
+                    }
+                    if (request == FlagsRequest.FRemoveUser)
+                    {
+                        RemoveUserWithGroup(ip, chatNumber);
                     }
                 }
-            }
-            catch(Exception error)
-            {
-                MessageBox.Show(error.Message);
+                else
+                {
+                    flagGetRequests = false;
+                }
             }
         }
         private void RemoveUserWithGroup(string ip, int chatNumber)
@@ -175,24 +190,36 @@ namespace VideoChat
         {
             lock (cb_Users)
             {
-                cb_Users.Items.Clear();
-                for (int i = 0; i < listUsersIp.Count; i++)
+                lock (listUsersIp)
                 {
-                    cb_Users.Items.Add(listUsersIp[i] + "   " + listUsersChatNumbers[i].ToString());
+                    lock (listUsersChatNumbers)
+                    {
+                        cb_Users.Items.Clear();
+                        for (int i = 0; i < listUsersIp.Count; i++)
+                        {
+                            cb_Users.Items.Add(listUsersIp[i] + "   " + listUsersChatNumbers[i].ToString());
+                        }
+                    }
                 }
             }
         }
         private void AddUserIpAndChatNumber(string ip, int chatNumber)
         {
-            if (!listUsersIp.Contains(ip))
+            lock (listUsersIp)
             {
-                listUsersIp.Add(ip);
-                listUsersChatNumbers.Add(chatNumber);
-            }
-            else
-            {
-                int indexElement = listUsersIp.IndexOf(ip);
-                listUsersChatNumbers[indexElement] = chatNumber;
+                lock (listUsersChatNumbers)
+                {
+                    if (!listUsersIp.Contains(ip))
+                    {
+                        listUsersIp.Add(ip);
+                        listUsersChatNumbers.Add(chatNumber);
+                    }
+                    else
+                    {
+                        int indexElement = listUsersIp.IndexOf(ip);
+                        listUsersChatNumbers[indexElement] = chatNumber;
+                    }
+                }
             }
         }     
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -225,10 +252,6 @@ namespace VideoChat
         {
             string Host = Dns.GetHostName();
             return Dns.GetHostByName(Host).AddressList[0].ToString();
-        }
-        private void btnGetListUsers_Click(object sender, EventArgs e)
-        {
-            UpdateListUsers();           
         }
         private void UpdateListUsers()
         {
@@ -274,15 +297,22 @@ namespace VideoChat
             }
             AbortGroup();
         }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-            SetMyChatNumber();
-        }
-
         private void button2_Click(object sender, EventArgs e)
         {
             UpdateUsers();
+        }
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            SettingCamera();
+        }
+        private void tS_CB_Cameras_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if ((tS_CB_Cameras.SelectedIndex != -1) && (sendVideo != null))
+            {
+                sendVideo.StopSendVideo();
+                sendVideo.MonikerStringVideo = videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString;
+                sendVideo.StartSendVideo();
+            }
         }
     }
 }

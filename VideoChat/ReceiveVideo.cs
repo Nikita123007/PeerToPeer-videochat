@@ -17,6 +17,8 @@ namespace VideoChat
         private PictureBox pb_Video;
         private List<int> listCurrentUsersChatNumbers;
         private Dictionary<int, Queue<byte[]>> QueuesUsersPackage;
+        private AutoResetEvent nextEventThread;
+        private AutoResetEvent thisEventThread;
 
         public List<int> ListCurrentUsersChatNumbers
         {
@@ -33,17 +35,15 @@ namespace VideoChat
             }
         }
 
-        public ReceiveVideo(PictureBox pb_Video)
-        {
-            StartInitialise(pb_Video);
-        }
-        public void StartInitialise(PictureBox pb_Video)
+        public ReceiveVideo(PictureBox pb_Video, AutoResetEvent nextEventThread, AutoResetEvent thisEventThread)
         {
             udp_Receiver = new Udp_Receiver(Defines.startPortsUsers);
             ListCurrentUsersChatNumbers = new List<int>();
             Pb_Video = pb_Video;
             threadReceiveVideo = new Thread(ReseiveDataOfImages);
             InitialiseQueues();
+            this.nextEventThread = nextEventThread;
+            this.thisEventThread = thisEventThread;
         }
         private void InitialiseQueues()
         {
@@ -65,6 +65,8 @@ namespace VideoChat
         {
             while (true)
             {
+                thisEventThread.WaitOne();
+                nextEventThread.Set();
                 if (udp_Receiver.AvailableData() >= Defines.lengthDgram)
                 {
                     byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
@@ -85,7 +87,9 @@ namespace VideoChat
             {
                 int pointer = 0;
                 byte[] imageInBytes = new byte[Defines.lengthDgram * Defines.MaxPackagesOnOneImage + 1];
+                thisEventThread.WaitOne();
                 byte[] currentPackage = QueuesUsersPackage[userNumber].Dequeue();
+                nextEventThread.Set();
                 if (currentPackage[Defines.lengthDgram - 1] == 1)
                 {
                     for (int i = 0; i < Defines.lengthDgram - 2; i++)
@@ -95,7 +99,9 @@ namespace VideoChat
                     }
                     while ((QueuesUsersPackage[userNumber].Count > 0) && (QueuesUsersPackage[userNumber].Peek()[Defines.lengthDgram - 1] == 0))
                     {
+                        thisEventThread.WaitOne();
                         currentPackage = QueuesUsersPackage[userNumber].Dequeue();
+                        nextEventThread.Set();
                         for (int i = 0; i < Defines.lengthDgram - 2; i++)
                         {
                             imageInBytes[pointer] = currentPackage[i];
