@@ -80,7 +80,7 @@ namespace VideoChat
                 nextEventThread.Set();
                 if (listCurrentUsersIp.Count != 0)
                 {
-                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / 5, eventArgs.Frame.Height * (pb_Video.Width / listCurrentUsersIp.Count / 5) / eventArgs.Frame.Width);
+                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / Defines.reducingQuality, eventArgs.Frame.Height * (pb_Video.Width / listCurrentUsersIp.Count / Defines.reducingQuality) / eventArgs.Frame.Width);
                     byte[] pictureInByte = ImageToByteArray(picture);
                     for (int i = 0; i < listCurrentUsersIp.Count; i++)
                     {

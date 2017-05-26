@@ -28,9 +28,10 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.pb_Video = new System.Windows.Forms.PictureBox();
             this.gb_standartButtons = new System.Windows.Forms.GroupBox();
-            this.button2 = new System.Windows.Forms.Button();
+            this.lblUserName = new System.Windows.Forms.Label();
             this.btn_Abort_Call_Group = new System.Windows.Forms.Button();
             this.btn_Call = new System.Windows.Forms.Button();
             this.cb_Users = new System.Windows.Forms.ComboBox();
@@ -39,6 +40,9 @@
             this.cameraToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.tS_CB_Cameras = new System.Windows.Forms.ToolStripComboBox();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.newNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.updateListUsersTimer = new System.Windows.Forms.Timer(this.components);
+            this.label1 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pb_Video)).BeginInit();
             this.gb_standartButtons.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -55,7 +59,8 @@
             // 
             // gb_standartButtons
             // 
-            this.gb_standartButtons.Controls.Add(this.button2);
+            this.gb_standartButtons.Controls.Add(this.label1);
+            this.gb_standartButtons.Controls.Add(this.lblUserName);
             this.gb_standartButtons.Controls.Add(this.btn_Abort_Call_Group);
             this.gb_standartButtons.Controls.Add(this.btn_Call);
             this.gb_standartButtons.Controls.Add(this.cb_Users);
@@ -65,20 +70,18 @@
             this.gb_standartButtons.TabIndex = 4;
             this.gb_standartButtons.TabStop = false;
             // 
-            // button2
+            // lblUserName
             // 
-            this.button2.Location = new System.Drawing.Point(231, 9);
-            this.button2.Margin = new System.Windows.Forms.Padding(4);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(184, 38);
-            this.button2.TabIndex = 10;
-            this.button2.Text = "Update list users";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.lblUserName.AutoSize = true;
+            this.lblUserName.Font = new System.Drawing.Font("Segoe Marker", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblUserName.Location = new System.Drawing.Point(12, 64);
+            this.lblUserName.Name = "lblUserName";
+            this.lblUserName.Size = new System.Drawing.Size(0, 31);
+            this.lblUserName.TabIndex = 9;
             // 
             // btn_Abort_Call_Group
             // 
-            this.btn_Abort_Call_Group.Location = new System.Drawing.Point(487, 56);
+            this.btn_Abort_Call_Group.Location = new System.Drawing.Point(657, 56);
             this.btn_Abort_Call_Group.Name = "btn_Abort_Call_Group";
             this.btn_Abort_Call_Group.Size = new System.Drawing.Size(176, 37);
             this.btn_Abort_Call_Group.TabIndex = 8;
@@ -88,7 +91,7 @@
             // 
             // btn_Call
             // 
-            this.btn_Call.Location = new System.Drawing.Point(487, 9);
+            this.btn_Call.Location = new System.Drawing.Point(657, 9);
             this.btn_Call.Name = "btn_Call";
             this.btn_Call.Size = new System.Drawing.Size(176, 38);
             this.btn_Call.TabIndex = 6;
@@ -99,9 +102,9 @@
             // cb_Users
             // 
             this.cb_Users.FormattingEnabled = true;
-            this.cb_Users.Location = new System.Drawing.Point(187, 61);
+            this.cb_Users.Location = new System.Drawing.Point(168, 15);
             this.cb_Users.Name = "cb_Users";
-            this.cb_Users.Size = new System.Drawing.Size(271, 29);
+            this.cb_Users.Size = new System.Drawing.Size(466, 29);
             this.cb_Users.TabIndex = 4;
             // 
             // menuStrip1
@@ -118,7 +121,8 @@
             // settingsToolStripMenuItem
             // 
             this.settingsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.cameraToolStripMenuItem});
+            this.cameraToolStripMenuItem,
+            this.newNameToolStripMenuItem});
             this.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             this.settingsToolStripMenuItem.Size = new System.Drawing.Size(81, 25);
             this.settingsToolStripMenuItem.Text = "Settings";
@@ -129,7 +133,7 @@
             this.tS_CB_Cameras,
             this.toolStripMenuItem1});
             this.cameraToolStripMenuItem.Name = "cameraToolStripMenuItem";
-            this.cameraToolStripMenuItem.Size = new System.Drawing.Size(152, 26);
+            this.cameraToolStripMenuItem.Size = new System.Drawing.Size(158, 26);
             this.cameraToolStripMenuItem.Text = "Camera";
             // 
             // tS_CB_Cameras
@@ -145,6 +149,27 @@
             this.toolStripMenuItem1.Size = new System.Drawing.Size(280, 26);
             this.toolStripMenuItem1.Text = "Update";
             this.toolStripMenuItem1.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
+            // 
+            // newNameToolStripMenuItem
+            // 
+            this.newNameToolStripMenuItem.Name = "newNameToolStripMenuItem";
+            this.newNameToolStripMenuItem.Size = new System.Drawing.Size(158, 26);
+            this.newNameToolStripMenuItem.Text = "New name";
+            this.newNameToolStripMenuItem.Click += new System.EventHandler(this.newNameToolStripMenuItem_Click);
+            // 
+            // updateListUsersTimer
+            // 
+            this.updateListUsersTimer.Interval = 1000;
+            this.updateListUsersTimer.Tick += new System.EventHandler(this.updateListUsersTimer_Tick);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(105, 18);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(57, 21);
+            this.label1.TabIndex = 10;
+            this.label1.Text = "Users:";
             // 
             // Form1
             // 
@@ -167,6 +192,7 @@
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pb_Video)).EndInit();
             this.gb_standartButtons.ResumeLayout(false);
+            this.gb_standartButtons.PerformLayout();
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.ResumeLayout(false);
@@ -185,8 +211,11 @@
         private System.Windows.Forms.ToolStripComboBox tS_CB_Cameras;
         private System.Windows.Forms.Button btn_Call;
         private System.Windows.Forms.Button btn_Abort_Call_Group;
-        private System.Windows.Forms.Button button2;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
+        private System.Windows.Forms.Timer updateListUsersTimer;
+        private System.Windows.Forms.Label lblUserName;
+        private System.Windows.Forms.ToolStripMenuItem newNameToolStripMenuItem;
+        private System.Windows.Forms.Label label1;
     }
 }
 

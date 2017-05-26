@@ -108,11 +108,12 @@ namespace VideoChat
                             pointer++;
                         }
                     }
-                    SetImageOnForm(ByteArrayToImage(imageInBytes), userNumber);
+                    Image image = ByteArrayToImage(imageInBytes);
+                    SetImageOnForm(new Bitmap(image, image.Width * Defines.reducingQuality, image.Width * Defines.reducingQuality * image.Height / image.Width), userNumber);
                 }
             }           
         }
-        private void SetImageOnForm(Image image, int userNumber)
+        private void SetImageOnForm(Bitmap image, int userNumber)
         {
             int index = listCurrentUsersChatNumbers.IndexOf(userNumber);
             Graphics g = pb_Video.CreateGraphics();
