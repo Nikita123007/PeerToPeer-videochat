@@ -92,7 +92,8 @@ namespace VideoChat
                 nextEventThread.Set();
                 if (currentPackage[Defines.lengthDgram - 1] == 1)
                 {
-                    for (int i = 0; i < Defines.lengthDgram - 2; i++)
+                    byte reducingQuality = currentPackage[Defines.lengthDgram - 3];
+                    for (int i = 0; i < Defines.lengthDgram - 3; i++)
                     {
                         imageInBytes[pointer] = currentPackage[i];
                         pointer++;
@@ -102,14 +103,14 @@ namespace VideoChat
                         thisEventThread.WaitOne();
                         currentPackage = QueuesUsersPackage[userNumber].Dequeue();
                         nextEventThread.Set();
-                        for (int i = 0; i < Defines.lengthDgram - 2; i++)
+                        for (int i = 0; i < Defines.lengthDgram - 3; i++)
                         {
                             imageInBytes[pointer] = currentPackage[i];
                             pointer++;
                         }
                     }
                     Image image = ByteArrayToImage(imageInBytes);
-                    SetImageOnForm(new Bitmap(image, image.Width * Defines.reducingQuality, image.Width * Defines.reducingQuality * image.Height / image.Width), userNumber);
+                    SetImageOnForm(new Bitmap(image, image.Width * reducingQuality, image.Width * reducingQuality * image.Height / image.Width), userNumber);
                 }
             }           
         }
@@ -192,6 +193,8 @@ namespace VideoChat
                 {
                     listCurrentUsersChatNumbers.Remove(userChatNumber);
                     QueuesUsersPackage.Remove(userChatNumber);
+                    Graphics g = pb_Video.CreateGraphics();
+                    g.Clear(Color.White);
                     return true;
                 }
                 else
@@ -208,6 +211,8 @@ namespace VideoChat
                 {
                     listCurrentUsersChatNumbers.Add(userChatNumber);
                     QueuesUsersPackage.Add(userChatNumber, new Queue<byte[]>());
+                    Graphics g = pb_Video.CreateGraphics();
+                    g.Clear(Color.White);
                     return true;
                 }
                 else

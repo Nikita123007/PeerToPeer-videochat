@@ -6,13 +6,10 @@ using System.Threading.Tasks;
 
 namespace VideoChat
 {
-    enum FlagsRequest
+    [Serializable]
+    public struct SettingVideoChat
     {
-        FSetInfo,
-        FGetInfo,
-        FTrySetUser,
-        FAddUser,
-        FRemoveUser,
-        FNoAddUser
+        public string Name;
+        public Qualityes Quality;
     }
 }

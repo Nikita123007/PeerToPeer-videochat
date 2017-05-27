@@ -29,24 +29,17 @@ namespace VideoChat
         }
         public void Connect(string ip, int port)
         {
-            try
+            if (ip != "255.255.255.255")
             {
-                if (ip != "255.255.255.255")
-                {
-                    endPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-                    socket.EnableBroadcast = false;
-                }
-                else
-                {
-                    endPoint = new IPEndPoint(IPAddress.Broadcast, port);
-                    socket.EnableBroadcast = true;
-                }
-                connected = true;
+                endPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+                socket.EnableBroadcast = false;
             }
-            catch (Exception)
+            else
             {
-                connected = false;
+                endPoint = new IPEndPoint(IPAddress.Broadcast, port);
+                socket.EnableBroadcast = true;
             }
+            connected = true;
         }
         public void SendTo(byte[] data)
         {

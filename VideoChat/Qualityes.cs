@@ -6,13 +6,11 @@ using System.Threading.Tasks;
 
 namespace VideoChat
 {
-    enum FlagsRequest
+    [Serializable]
+    public enum Qualityes
     {
-        FSetInfo,
-        FGetInfo,
-        FTrySetUser,
-        FAddUser,
-        FRemoveUser,
-        FNoAddUser
+        High,
+        Medium,
+        Small
     }
 }

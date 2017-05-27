@@ -77,9 +77,12 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="GetRequests.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Qualityes.cs" />
     <Compile Include="ReceiveVideo.cs" />
+    <Compile Include="SettingForm.cs" />
     <Compile Include="Udp_Receiver.cs" />
     <Compile Include="Udp_Sender.cs" />
     <Compile Include="SendVideo.cs" />

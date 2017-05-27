@@ -1,40 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using AForge.Video.DirectShow;
-using AForge.Video;
 using System.IO;
 using System.Threading;
-using System.Net;
-using InputBox;
 using System.Text.RegularExpressions;
+using System.Xml.Serialization;
 
 namespace VideoChat
 {
+
+    public delegate void delegateUpdateListUsers();
     public partial class Form1 : Form
     {
         private SendVideo sendVideo;
-        private FilterInfoCollection videoCaptureDiveses;              
-        private Udp_Receiver RequestsFromNewUser;
-        private Udp_Sender RequestAboutNewUser;
-        private Thread threadGetRequests;        
-        private int myChatNumber;
-        private List<string> listUsersIp;
-        private List<int> listUsersChatNumbers;
-        private List<string> listUsersName;
-        private Point imageSize;
         private ReceiveVideo receiveVideo;
-        private bool flagGetRequests;
+        private FilterInfoCollection videoCaptureDiveses;              
+        private GetRequests getRequests;
         private AutoResetEvent eventThreadGetRequests;
         private AutoResetEvent eventThreadSendVideo;
         private AutoResetEvent eventThreadReceiveVideo;
-        private string myUserName;
+        public event delegateUpdateListUsers eventUpdateListUsers;
 
         public Form1()
         {
@@ -44,12 +30,15 @@ namespace VideoChat
         {
             SettingCamera();
             BeginInitializeParams();
-            StartGetRequest();
+            StartGetRequests();
             StartReceiveVideo();
             StartSendVideo();
             eventThreadGetRequests.Set();
-            SetMyChatNumber();
-            updateListUsersTimer.Start();
+            getRequests.SetMyChatNumber();
+        }
+        private void StartGetRequests()
+        {
+            getRequests.StartGetRequests();
         }
         private void StartReceiveVideo()
         {           
@@ -74,33 +63,27 @@ namespace VideoChat
         }
         private void BeginInitializeParams()
         {
-            myChatNumber = 1;
-            flagGetRequests = false;
-            //myUserName = GetUserName();
-            //SetUserNameOnForm();
+            LoadSetting();
+            string myUserName = lblUserName.Text;
+            SetUserNameOnForm(myUserName);
             eventThreadGetRequests = new AutoResetEvent(false);
             eventThreadSendVideo = new AutoResetEvent(false);
-            eventThreadReceiveVideo = new AutoResetEvent(false);
-            listUsersIp = new List<string>();
-            threadGetRequests = new Thread(GetRequest);
-            RequestAboutNewUser = new Udp_Sender();
-            RequestsFromNewUser = new Udp_Receiver(Defines.portRequestNewUser);
-            imageSize = new Point(0, 0);
-            listUsersChatNumbers = new List<int>();
-            listUsersName = new List<string>();
+            eventThreadReceiveVideo = new AutoResetEvent(false);            
             if (tS_CB_Cameras.SelectedIndex != -1)
             {
-                sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, myChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+                sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, Defines.DefaultChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
             }
             else
             {
-                sendVideo = new SendVideo("default", myChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+                sendVideo = new SendVideo("default", Defines.DefaultChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
             }
-            receiveVideo = new ReceiveVideo(pb_Video, eventThreadGetRequests, eventThreadReceiveVideo);          
+            receiveVideo = new ReceiveVideo(pb_Video, eventThreadGetRequests, eventThreadReceiveVideo);
+            eventUpdateListUsers += UpdateListUsers;
+            getRequests = new GetRequests(myUserName, eventThreadSendVideo, eventThreadGetRequests, sendVideo, receiveVideo, eventUpdateListUsers);
         }
-        private void SetUserNameOnForm()
+        private void SetUserNameOnForm(string name)
         {
-            lblUserName.Text = myUserName;
+            lblUserName.Text = name;
         }
         private string GetUserName()
         {
@@ -131,241 +114,17 @@ namespace VideoChat
                 result = false;
             }
             return result;           
-        }
-        private void SetRequestAboutNewUser(FlagsRequest numberRequest, string ip)
-        {
-            string ipAddress = GetHostIP();
-            byte[] request = new byte[Defines.RequestSize];
-            request[0] = (byte)GetNumberOfIp(ipAddress, 1);
-            request[1] = (byte)GetNumberOfIp(ipAddress, 2);
-            request[2] = (byte)GetNumberOfIp(ipAddress, 3);
-            request[3] = (byte)GetNumberOfIp(ipAddress, 4);
-            request[4] = (byte)myChatNumber;
-            request[5] = (byte)numberRequest;
-            /*byte[] nameInBytes = TranslateNameInBytes(myUserName, Defines.maxLenghtName);
-            for (int i = Defines.startPositionNameInRequest, j = 0; (i < Defines.RequestSize) && (j < nameInBytes.Length); i++, j++)
-            {
-                request[i] = nameInBytes[j];
-            }*/
-            RequestAboutNewUser.Connect(ip, Defines.portRequestNewUser);
-            if (RequestAboutNewUser.Connected)
-            {
-                RequestAboutNewUser.SendTo(request);
-            }
-        }
-        private byte[] TranslateNameInBytes(string userName, int maxLenghtName)
-        {
-            byte[] nameInBytes = Encoding.ASCII.GetBytes(userName);
-            byte[] result = new byte[maxLenghtName];
-            for (int i = 0; i < maxLenghtName; i++)
-            {
-                if (i < nameInBytes.Length)
-                {
-                    result[i] = nameInBytes[i];
-                }
-                else
-                {
-                    result[i] = 0;
-                }
-            }
-            return result;
-        }
-        private string TranslateBytesInName(byte[] nameInBytes)
-        {
-            int lastElem = -1;
-            for (int i = nameInBytes.Length - 1; i > 0; i--)
-            {
-                if (nameInBytes[i] != 0)
-                {
-                    lastElem = i;
-                }
-            }
-            if (lastElem == -1)
-            {
-                return Defines.defaultName;
-            }
-            byte[] clearNameInByte = new byte[lastElem + 1];
-            for (int i = 0; i < lastElem + 1; i++)
-            {
-                clearNameInByte[i] = nameInBytes[i];
-            }
-            return Encoding.ASCII.GetString(clearNameInByte);
-        }
-        private void GetTestImage(object sender, NewFrameEventArgs eventArgs)
-        {
-            Bitmap image = (Bitmap)eventArgs.Frame.Clone();
-            imageSize = new Point(image.Width, image.Height);
-        }
-        private void StartGetRequest()
-        {
-            if ((threadGetRequests == null) || (!threadGetRequests.IsAlive))
-            {
-                threadGetRequests.Start();
-            }
-        }
-        private void GetRequest()
-        {
-            while (true)
-            {
-                eventThreadGetRequests.WaitOne();
-                eventThreadSendVideo.Set();
-                if (RequestsFromNewUser.AvailableData() >= Defines.RequestSize)
-                {
-                    byte[] request = RequestsFromNewUser.ReceiveTo(Defines.RequestSize);
-                    flagGetRequests = true;
-                    string ip = request[0].ToString() + "." + request[1].ToString() + "." + request[2].ToString() + "." + request[3].ToString();
-                    int chatNumber = request[4];
-                    FlagsRequest numberRequest = (FlagsRequest)request[5];
-                    /*byte[] nameInBytes = new byte[Defines.maxLenghtName];
-                    for (int i = Defines.startPositionNameInRequest, j = 0; (i < Defines.RequestSize) && (j < nameInBytes.Length); i++, j++)
-                    {
-                        nameInBytes[j] = request[i];
-                    }
-                    string name = TranslateBytesInName(nameInBytes);*/
-                    if ((chatNumber == 0) || (ip == GetHostIP()))
-                    {
-                        continue;
-                    }
-                    if (numberRequest == FlagsRequest.FSetInfo)
-                    {
-                        AddUserIpAndChatNumber(ip, chatNumber);
-                    }
-                    if (numberRequest == FlagsRequest.FGetInfo)
-                    {
-                        SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, ip);
-                        AddUserIpAndChatNumber(ip, chatNumber);
-                    }
-                    if (numberRequest == FlagsRequest.FTrySetUser)
-                    {
-                        if (MessageBox.Show("New user with chat number " + chatNumber + " and user ip " + ip + " want add. Add his?", "new user", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
-                        {
-                            SetRequestAboutNewUser(FlagsRequest.FAddUser, ip);
-                            AddUserIpAndChatNumber(ip, chatNumber);
-                            AddNewUserInGroup(ip, chatNumber);
-                        }
-                    }
-                    if (numberRequest == FlagsRequest.FAddUser)
-                    {
-                        AddNewUserInGroup(ip, chatNumber);
-                    }
-                    if (numberRequest == FlagsRequest.FRemoveUser)
-                    {
-                        RemoveUserWithGroup(ip, chatNumber);
-                    }
-                }
-                else
-                {
-                    flagGetRequests = false;
-                }
-            }
-        }
-        private void RemoveUserWithGroup(string ip, int chatNumber)
-        {
-            sendVideo.RemoveUser(ip);
-            receiveVideo.RemoveUser(chatNumber);
-        }
-        private void AbortGroup()
-        {
-            for (int i = 0; i < listUsersIp.Count; i++)
-            {
-                sendVideo.RemoveUser(listUsersIp[i]);
-                receiveVideo.RemoveUser(listUsersChatNumbers[i]);
-            }
-        }
-        private void AddNewUserInGroup(string ip, int chatNumber)
-        {
-            sendVideo.AddUser(ip);
-            receiveVideo.AddUser(chatNumber);
-        }
-        public void UpdateUsers()
-        {
-            lock (cb_Users)
-            {
-                lock (listUsersIp)
-                {
-                    lock (listUsersChatNumbers)
-                    {
-                        cb_Users.Items.Clear();
-                        for (int i = 0; i < listUsersIp.Count; i++)
-                        {
-                            cb_Users.Items.Add("ip " + listUsersIp[i] + " chat number " + listUsersChatNumbers[i].ToString());
-                        }
-                    }
-                }
-            }
-        }
-        private void AddUserIpAndChatNumber(string ip, int chatNumber)
-        {
-            lock (listUsersIp)
-            {
-                lock (listUsersChatNumbers)
-                {
-                    if (!listUsersIp.Contains(ip))
-                    {
-                        listUsersIp.Add(ip);
-                        listUsersChatNumbers.Add(chatNumber);
-                    }
-                    else
-                    {
-                        int indexElement = listUsersIp.IndexOf(ip);
-                        listUsersChatNumbers[indexElement] = chatNumber;
-                    }
-                }
-            }
-        }     
+        }            
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             StopExecuteThreads();
+            SaveSetting();
         }
         private void StopExecuteThreads()
         {
             sendVideo.StopSendVideo();
             receiveVideo.StopReceiveVideo();
-            threadGetRequests.Abort();
-        }
-        private int GetNumberOfIp(string ipAddress, int number)
-        {
-            string[] numbersOfIp = new string[4] {"", "", "", ""};
-            for (int i = 0, j = 0; i < ipAddress.Length; i++)
-            {
-                if (ipAddress[i] != '.')
-                {
-                    numbersOfIp[j] += ipAddress[i];
-                }
-                else
-                {
-                    j++;
-                }
-            }
-            return Convert.ToInt32(numbersOfIp[number - 1]);
-        }
-        private string GetHostIP()
-        {
-            string Host = Dns.GetHostName();
-            return Dns.GetHostByName(Host).AddressList[0].ToString();
-        }
-        private void UpdateListUsers()
-        {
-            listUsersIp.Clear();
-            listUsersChatNumbers.Clear();
-            SetRequestAboutNewUser(FlagsRequest.FGetInfo, Defines.broadcast);
-        }
-        private void SetMyChatNumber()
-        {
-            UpdateListUsers();
-            Thread.Sleep(1000);
-            while (flagGetRequests);
-            int myNumber = 1;
-            while (listUsersChatNumbers.Contains(myNumber))
-            {
-                myNumber++;
-            }
-            myChatNumber = myNumber % 256;
-            for (int i = 0; i < listUsersIp.Count; i++)
-            {
-                SetRequestAboutNewUser((byte)FlagsRequest.FSetInfo, listUsersIp[i]);
-            }
-            sendVideo.MyChatNumber = myNumber;
+            getRequests.StopGetRequests();
         }
         private void btn_Call_Click(object sender, EventArgs e)
         {
@@ -373,24 +132,25 @@ namespace VideoChat
             lock (cb_Users)
             {
                 if ((cb_Users.Items != null) && (cb_Users.Items.Count != 0) && (cb_Users.SelectedIndex != -1))
-                    callUserIp = listUsersIp[cb_Users.SelectedIndex];
+                {
+                    callUserIp = getRequests.listUsersIp[cb_Users.SelectedIndex];
+                }
             }
-            if (callUserIp != "")
+            if ((callUserIp != "") && (!sendVideo.ContainUser(callUserIp)))
             {
-                SetRequestAboutNewUser(FlagsRequest.FTrySetUser, callUserIp);
+                getRequests.SendRequest(FlagsRequest.FTrySetUser, callUserIp);
             }
         }
         private void btn_Abort_Call_Group_Click(object sender, EventArgs e)
         {
-            for(int i = 0; i < listUsersIp.Count; i++)
+            lock (getRequests.listUsersIp)
             {
-                SetRequestAboutNewUser(FlagsRequest.FRemoveUser, listUsersIp[i]);
+                for (int i = 0; i < getRequests.listUsersIp.Count; i++)
+                {
+                    getRequests.SendRequest(FlagsRequest.FRemoveUser, getRequests.listUsersIp[i]);
+                }
+                getRequests.AbortGroup();
             }
-            AbortGroup();
-        }
-        private void button2_Click(object sender, EventArgs e)
-        {
-            UpdateUsers();
         }
         private void toolStripMenuItem1_Click(object sender, EventArgs e)
         {
@@ -405,14 +165,139 @@ namespace VideoChat
                 sendVideo.StartSendVideo();
             }
         }
-        private void updateListUsersTimer_Tick(object sender, EventArgs e)
-        {
-            UpdateUsers();
-        }
         private void newNameToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            /*myUserName = GetUserName();
-            SetUserNameOnForm();*/
+            string myUserName = GetUserName();
+            SetUserNameOnForm(myUserName);
+            SaveSetting();
+            getRequests.myUserName = myUserName;
+            lock (getRequests.listUsersIp)
+            {
+                for (int i = 0; i < getRequests.listUsersIp.Count; i++)
+                {
+                    getRequests.SendRequest(FlagsRequest.FSetInfo, getRequests.listUsersIp[i]);
+                }
+            }
+        }
+        public void UpdateListUsers()
+        {
+            lock (cb_Users)
+            {
+                lock (getRequests.listUsersName)
+                {
+                    lock (getRequests.listUsersIp)
+                    {
+                        lock (getRequests.listUsersChatNumbers)
+                        {
+                            if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.Clear(); }));
+                            else cb_Users.Items.Clear();
+                            string[] recordsUsers = new string[getRequests.listUsersIp.Count];
+                            for (int i = 0; i < getRequests.listUsersIp.Count; i++)
+                            {
+                                recordsUsers[i] = getRequests.listUsersName[i] + ": ip: " + getRequests.listUsersIp[i] + ", number: " + getRequests.listUsersChatNumbers[i].ToString();
+                            }
+                            if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.AddRange(recordsUsers); }));
+                            else cb_Users.Items.AddRange(recordsUsers);
+                        }
+                    }
+                }
+            }
+        }
+        private void toolStripComboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (eventThreadGetRequests != null)
+            {
+                eventThreadGetRequests.WaitOne();
+                SetParamsQuality();
+                eventThreadSendVideo.Set();
+            }            
+        }
+        private void SetParamsQuality()
+        {
+            byte reducingQuality;
+            int lengthDgram;
+            GetParamsQualityes(cb_Quality.Text, out reducingQuality, out lengthDgram);
+            Defines.lengthDgram = lengthDgram;
+            Defines.reducingQuality = reducingQuality;
+        }
+        private void GetParamsQualityes(string quality, out byte reducingQuality, out int lengthDgram)
+        {
+            switch (quality)
+            {
+                case nameof(Qualityes.High):
+                    lengthDgram = 80000;
+                    reducingQuality = 1;
+                    break;
+                case nameof(Qualityes.Medium):
+                    lengthDgram = 27000;
+                    reducingQuality = 3;
+                    break;
+                case nameof(Qualityes.Small):
+                    lengthDgram = 15000;
+                    reducingQuality = 5;
+                    break;
+                default:
+                    lengthDgram = 15000;
+                    reducingQuality = 5;
+                    break;
+            }
+        }
+        private void SaveSetting()
+        {
+            SettingVideoChat settingForm = GetSetting();
+            XmlSerializer formatter = new XmlSerializer(settingForm.GetType());
+            var ns = new XmlSerializerNamespaces();
+            ns.Add("", "");
+            using (FileStream fs = new FileStream(Defines.pathSettingFile, FileMode.Create))
+            {
+                formatter.Serialize(fs, settingForm, ns);
+            }
+        }
+        private void LoadSetting()
+        {
+            try
+            {
+                SettingVideoChat settingForm = new SettingVideoChat();
+                XmlSerializer formatter = new XmlSerializer(settingForm.GetType());
+                using (FileStream fs = new FileStream(Defines.pathSettingFile, FileMode.Open))
+                {
+                    settingForm = (SettingVideoChat)formatter.Deserialize(fs);
+                }
+                if (CheckFormSetting(settingForm))
+                {
+                    SetSetting(settingForm);
+                }
+                else
+                {
+                    SetSetting(Defines.defaultSetting);
+                }
+            }
+            catch (Exception)
+            {
+                SetSetting(Defines.defaultSetting);
+            }
+        }
+        private bool CheckFormSetting(SettingVideoChat settingForm)
+        {
+            bool result = true;
+            if (!CorrectName(settingForm.Name))
+            {
+                result = false;
+            }
+            return result;
+        }
+        private SettingVideoChat GetSetting()
+        {
+            SettingVideoChat settingForm = new SettingVideoChat();
+            settingForm.Name = lblUserName.Text;
+            settingForm.Quality = (Qualityes)cb_Quality.SelectedIndex;
+            return settingForm;
+        }
+        private void SetSetting(SettingVideoChat settingForm)
+        {
+            lblUserName.Text = settingForm.Name;
+            cb_Quality.Text = (settingForm.Quality).ToString();
+            SetParamsQuality();
         }
     }
 }

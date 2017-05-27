@@ -28,9 +28,9 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
             this.pb_Video = new System.Windows.Forms.PictureBox();
             this.gb_standartButtons = new System.Windows.Forms.GroupBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.lblUserName = new System.Windows.Forms.Label();
             this.btn_Abort_Call_Group = new System.Windows.Forms.Button();
             this.btn_Call = new System.Windows.Forms.Button();
@@ -41,8 +41,8 @@
             this.tS_CB_Cameras = new System.Windows.Forms.ToolStripComboBox();
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.newNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.updateListUsersTimer = new System.Windows.Forms.Timer(this.components);
-            this.label1 = new System.Windows.Forms.Label();
+            this.qualityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.cb_Quality = new System.Windows.Forms.ToolStripComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.pb_Video)).BeginInit();
             this.gb_standartButtons.SuspendLayout();
             this.menuStrip1.SuspendLayout();
@@ -50,6 +50,7 @@
             // 
             // pb_Video
             // 
+            this.pb_Video.BackColor = System.Drawing.Color.White;
             this.pb_Video.Location = new System.Drawing.Point(0, 33);
             this.pb_Video.Margin = new System.Windows.Forms.Padding(4);
             this.pb_Video.Name = "pb_Video";
@@ -59,6 +60,7 @@
             // 
             // gb_standartButtons
             // 
+            this.gb_standartButtons.BackColor = System.Drawing.Color.White;
             this.gb_standartButtons.Controls.Add(this.label1);
             this.gb_standartButtons.Controls.Add(this.lblUserName);
             this.gb_standartButtons.Controls.Add(this.btn_Abort_Call_Group);
@@ -69,6 +71,15 @@
             this.gb_standartButtons.Size = new System.Drawing.Size(874, 98);
             this.gb_standartButtons.TabIndex = 4;
             this.gb_standartButtons.TabStop = false;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(105, 18);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(57, 21);
+            this.label1.TabIndex = 10;
+            this.label1.Text = "Users:";
             // 
             // lblUserName
             // 
@@ -122,7 +133,8 @@
             // 
             this.settingsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.cameraToolStripMenuItem,
-            this.newNameToolStripMenuItem});
+            this.newNameToolStripMenuItem,
+            this.qualityToolStripMenuItem});
             this.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             this.settingsToolStripMenuItem.Size = new System.Drawing.Size(81, 25);
             this.settingsToolStripMenuItem.Text = "Settings";
@@ -157,24 +169,30 @@
             this.newNameToolStripMenuItem.Text = "New name";
             this.newNameToolStripMenuItem.Click += new System.EventHandler(this.newNameToolStripMenuItem_Click);
             // 
-            // updateListUsersTimer
+            // qualityToolStripMenuItem
             // 
-            this.updateListUsersTimer.Interval = 1000;
-            this.updateListUsersTimer.Tick += new System.EventHandler(this.updateListUsersTimer_Tick);
+            this.qualityToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.cb_Quality});
+            this.qualityToolStripMenuItem.Name = "qualityToolStripMenuItem";
+            this.qualityToolStripMenuItem.Size = new System.Drawing.Size(158, 26);
+            this.qualityToolStripMenuItem.Text = "Quality";
             // 
-            // label1
+            // cb_Quality
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(105, 18);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(57, 21);
-            this.label1.TabIndex = 10;
-            this.label1.Text = "Users:";
+            this.cb_Quality.Items.AddRange(new object[] {
+            "High",
+            "Medium",
+            "Small"});
+            this.cb_Quality.Name = "cb_Quality";
+            this.cb_Quality.Size = new System.Drawing.Size(121, 23);
+            this.cb_Quality.Text = "Small";
+            this.cb_Quality.SelectedIndexChanged += new System.EventHandler(this.toolStripComboBox1_SelectedIndexChanged);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 21F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.White;
             this.ClientSize = new System.Drawing.Size(874, 550);
             this.Controls.Add(this.gb_standartButtons);
             this.Controls.Add(this.pb_Video);
@@ -212,10 +230,11 @@
         private System.Windows.Forms.Button btn_Call;
         private System.Windows.Forms.Button btn_Abort_Call_Group;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
-        private System.Windows.Forms.Timer updateListUsersTimer;
         private System.Windows.Forms.Label lblUserName;
         private System.Windows.Forms.ToolStripMenuItem newNameToolStripMenuItem;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ToolStripMenuItem qualityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripComboBox cb_Quality;
     }
 }
 

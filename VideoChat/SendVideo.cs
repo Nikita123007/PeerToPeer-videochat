@@ -31,13 +31,6 @@ namespace VideoChat
                 myChatNumber = value;
             }
         }
-        public List<string> ListCurrentUsersIp
-        {
-            set
-            {
-                listCurrentUsersIp = value;
-            }
-        }
         public string MonikerStringVideo
         {
             set
@@ -60,7 +53,7 @@ namespace VideoChat
             udp_Sender = new Udp_Sender();
             Pb_Video = pb_Video;
             MyChatNumber = myChatNumber;
-            ListCurrentUsersIp = new List<string>();
+            listCurrentUsersIp = new List<string>();
             MonikerStringVideo = monikerStringVideo;
             this.nextEventThread = nextEventThread;
             this.thisEventThread = thisEventThread;
@@ -99,6 +92,7 @@ namespace VideoChat
                 try
                 {
                     sendData[Defines.lengthDgram - 2] = (byte)myChatNumber;
+                    sendData[Defines.lengthDgram - 3] = Defines.reducingQuality;
                     if (data.Length <= (Defines.lengthDgram - 2))
                     {
                         data.CopyTo(sendData, 0);
@@ -115,7 +109,7 @@ namespace VideoChat
                                 sendData[Defines.lengthDgram - 1] = 1;
                             else
                                 sendData[Defines.lengthDgram - 1] = 0;
-                            for (int index = 0; index < Defines.lengthDgram - 2; index++)
+                            for (int index = 0; index < Defines.lengthDgram - 3; index++)
                             {
                                 if (pointer < data.Length)
                                 {
@@ -183,6 +177,8 @@ namespace VideoChat
                 if (listCurrentUsersIp.Contains(ip))
                 {
                     listCurrentUsersIp.Remove(ip);
+                    Graphics g = pb_Video.CreateGraphics();
+                    g.Clear(Color.White);
                     return true;
                 }
                 else
@@ -198,12 +194,21 @@ namespace VideoChat
                 if (!listCurrentUsersIp.Contains(ip))
                 {
                     listCurrentUsersIp.Add(ip);
+                    Graphics g = pb_Video.CreateGraphics();
+                    g.Clear(Color.White);
                     return true;
                 }
                 else
                 {
                     return false;
                 }
+            }
+        }
+        public bool ContainUser(string ip)
+        {
+            lock (listCurrentUsersIp)
+            {
+                return listCurrentUsersIp.Contains(ip);
             }
         }
     }
