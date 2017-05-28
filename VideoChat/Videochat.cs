@@ -11,18 +11,17 @@ namespace VideoChat
 {
 
     public delegate void delegateUpdateListUsers();
-    public partial class Form1 : Form
+    public partial class Videochat : Form
     {
         private SendVideo sendVideo;
         private ReceiveVideo receiveVideo;
         private FilterInfoCollection videoCaptureDiveses;              
         private GetRequests getRequests;
-        private AutoResetEvent eventThreadGetRequests;
         private AutoResetEvent eventThreadSendVideo;
         private AutoResetEvent eventThreadReceiveVideo;
         public event delegateUpdateListUsers eventUpdateListUsers;
 
-        public Form1()
+        public Videochat()
         {
             InitializeComponent();
         }
@@ -33,8 +32,8 @@ namespace VideoChat
             StartGetRequests();
             StartReceiveVideo();
             StartSendVideo();
-            eventThreadGetRequests.Set();
             getRequests.SetMyChatNumber();
+            eventThreadSendVideo.Set();
         }
         private void StartGetRequests()
         {
@@ -66,7 +65,6 @@ namespace VideoChat
             LoadSetting();
             string myUserName = lblUserName.Text;
             SetUserNameOnForm(myUserName);
-            eventThreadGetRequests = new AutoResetEvent(false);
             eventThreadSendVideo = new AutoResetEvent(false);
             eventThreadReceiveVideo = new AutoResetEvent(false);            
             if (tS_CB_Cameras.SelectedIndex != -1)
@@ -77,9 +75,9 @@ namespace VideoChat
             {
                 sendVideo = new SendVideo("default", Defines.DefaultChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
             }
-            receiveVideo = new ReceiveVideo(pb_Video, eventThreadGetRequests, eventThreadReceiveVideo);
+            receiveVideo = new ReceiveVideo(pb_Video, eventThreadSendVideo, eventThreadReceiveVideo);
             eventUpdateListUsers += UpdateListUsers;
-            getRequests = new GetRequests(myUserName, eventThreadSendVideo, eventThreadGetRequests, sendVideo, receiveVideo, eventUpdateListUsers);
+            getRequests = new GetRequests(myUserName, sendVideo, receiveVideo, eventUpdateListUsers, pb_Video);
         }
         private void SetUserNameOnForm(string name)
         {
@@ -117,6 +115,7 @@ namespace VideoChat
         }            
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            getRequests.AbortGroup();
             StopExecuteThreads();
             SaveSetting();
         }
@@ -138,19 +137,12 @@ namespace VideoChat
             }
             if ((callUserIp != "") && (!sendVideo.ContainUser(callUserIp)))
             {
-                getRequests.SendRequest(FlagsRequest.FTrySetUser, callUserIp);
+                getRequests.Call(callUserIp);
             }
         }
         private void btn_Abort_Call_Group_Click(object sender, EventArgs e)
         {
-            lock (getRequests.listUsersIp)
-            {
-                for (int i = 0; i < getRequests.listUsersIp.Count; i++)
-                {
-                    getRequests.SendRequest(FlagsRequest.FRemoveUser, getRequests.listUsersIp[i]);
-                }
-                getRequests.AbortGroup();
-            }
+            getRequests.AbortGroup();
         }
         private void toolStripMenuItem1_Click(object sender, EventArgs e)
         {
@@ -183,7 +175,7 @@ namespace VideoChat
         {
             lock (cb_Users)
             {
-                lock (getRequests.listUsersName)
+                lock (getRequests.listUsersNames)
                 {
                     lock (getRequests.listUsersIp)
                     {
@@ -194,7 +186,7 @@ namespace VideoChat
                             string[] recordsUsers = new string[getRequests.listUsersIp.Count];
                             for (int i = 0; i < getRequests.listUsersIp.Count; i++)
                             {
-                                recordsUsers[i] = getRequests.listUsersName[i] + ": ip: " + getRequests.listUsersIp[i] + ", number: " + getRequests.listUsersChatNumbers[i].ToString();
+                                recordsUsers[i] = getRequests.listUsersNames[i] + ": ip: " + getRequests.listUsersIp[i] + ", number: " + getRequests.listUsersChatNumbers[i].ToString();
                             }
                             if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.AddRange(recordsUsers); }));
                             else cb_Users.Items.AddRange(recordsUsers);
@@ -205,39 +197,28 @@ namespace VideoChat
         }
         private void toolStripComboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (eventThreadGetRequests != null)
-            {
-                eventThreadGetRequests.WaitOne();
-                SetParamsQuality();
-                eventThreadSendVideo.Set();
-            }            
+            SetParamsQuality();
         }
         private void SetParamsQuality()
         {
             byte reducingQuality;
-            int lengthDgram;
-            GetParamsQualityes(cb_Quality.Text, out reducingQuality, out lengthDgram);
-            Defines.lengthDgram = lengthDgram;
+            GetParamsQualityes(cb_Quality.Text, out reducingQuality);
             Defines.reducingQuality = reducingQuality;
         }
-        private void GetParamsQualityes(string quality, out byte reducingQuality, out int lengthDgram)
+        private void GetParamsQualityes(string quality, out byte reducingQuality)
         {
             switch (quality)
             {
                 case nameof(Qualityes.High):
-                    lengthDgram = 80000;
                     reducingQuality = 1;
                     break;
                 case nameof(Qualityes.Medium):
-                    lengthDgram = 27000;
                     reducingQuality = 3;
                     break;
                 case nameof(Qualityes.Small):
-                    lengthDgram = 15000;
                     reducingQuality = 5;
                     break;
                 default:
-                    lengthDgram = 15000;
                     reducingQuality = 5;
                     break;
             }
@@ -298,6 +279,41 @@ namespace VideoChat
             lblUserName.Text = settingForm.Name;
             cb_Quality.Text = (settingForm.Quality).ToString();
             SetParamsQuality();
+        }
+        private void pb_Video_MouseClick(object sender, MouseEventArgs e)
+        {
+            foreach (InfoReceiveUser user in receiveVideo.listUsers)
+            {
+                if (user.callUser)
+                {
+                    if (CheckMouse(e.X, e.Y, user.callButton))
+                    {
+                        getRequests.SendRequest(FlagsRequest.FNoAddUser, user.ip);
+                        receiveVideo.RemoveUser(user.ip);
+                        return;
+                    }
+                }
+                if (user.answerUser)
+                {
+                    if (CheckMouse(e.X, e.Y, user.answerDownButton))
+                    {
+                        getRequests.SendRequest(FlagsRequest.FNoAddUser, user.ip);
+                        receiveVideo.RemoveUser(user.ip);
+                        return;
+                    }
+                    if (CheckMouse(e.X, e.Y, user.answerUpButton))
+                    {
+                        getRequests.SendRequest(FlagsRequest.FAddUser, user.ip);
+                        sendVideo.AddUser(user.ip);
+                        receiveVideo.RemoveAnswerUser(user.ip);
+                        return;
+                    }
+                }
+            }
+        }
+        public bool CheckMouse(int mouseX, int mouseY, Point point)
+        {
+            return ((Math.Abs(mouseX - point.X) < 40) && (Math.Abs(mouseY - point.Y) < 40));
         }
     }
 }

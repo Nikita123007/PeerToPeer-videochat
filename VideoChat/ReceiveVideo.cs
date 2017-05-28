@@ -15,18 +15,22 @@ namespace VideoChat
         private Udp_Receiver udp_Receiver;
         private Thread threadReceiveVideo;
         private PictureBox pb_Video;
-        private List<int> listCurrentUsersChatNumbers;
-        private Dictionary<int, Queue<byte[]>> QueuesUsersPackage;
+        private Dictionary<int, Queue<byte[]>> QueuesUsersPackages;
         private AutoResetEvent nextEventThread;
         private AutoResetEvent thisEventThread;
+        public List<InfoReceiveUser> listUsers;
 
-        public List<int> ListCurrentUsersChatNumbers
+      /*  public List<int> ListUsersChatNumbers
         {
+            get
+            {
+                return listUsersChatNumbers;
+            }
             set
             {
-                listCurrentUsersChatNumbers = value;
+                listUsersChatNumbers = value;
             }
-        }
+        }*/
         public PictureBox Pb_Video
         {
             set
@@ -38,7 +42,8 @@ namespace VideoChat
         public ReceiveVideo(PictureBox pb_Video, AutoResetEvent nextEventThread, AutoResetEvent thisEventThread)
         {
             udp_Receiver = new Udp_Receiver(Defines.startPortsUsers);
-            ListCurrentUsersChatNumbers = new List<int>();
+            udp_Receiver.Timeout = Defines.ReceiveTimeout;
+            listUsers = new List<InfoReceiveUser>();
             Pb_Video = pb_Video;
             threadReceiveVideo = new Thread(ReseiveDataOfImages);
             InitialiseQueues();
@@ -47,10 +52,10 @@ namespace VideoChat
         }
         private void InitialiseQueues()
         {
-            QueuesUsersPackage = new Dictionary<int, Queue<byte[]>>();
-            foreach (int userNumber in listCurrentUsersChatNumbers)
+            QueuesUsersPackages = new Dictionary<int, Queue<byte[]>>();
+            foreach (InfoReceiveUser user in listUsers)
             {
-                QueuesUsersPackage.Add(userNumber, new Queue<byte[]>());
+                QueuesUsersPackages.Add(user.chatNumber, new Queue<byte[]>());
             }
         }
         public void StartReceiveVideo()
@@ -60,7 +65,6 @@ namespace VideoChat
                 threadReceiveVideo.Start();
             }
         }
-
         private void ReseiveDataOfImages()
         {
             while (true)
@@ -70,55 +74,61 @@ namespace VideoChat
                 if (udp_Receiver.AvailableData() >= Defines.lengthDgram)
                 {
                     byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
-                    lock (listCurrentUsersChatNumbers)
+                    lock (listUsers)
                     {
-                        if (QueuesUsersPackage.ContainsKey(userPackage[Defines.lengthDgram - 2]))
+                        if (QueuesUsersPackages.ContainsKey(userPackage[Defines.lengthDgram - 2]))
                         {
-                            QueuesUsersPackage[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
+                            QueuesUsersPackages[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
                             TryGetImageUser(userPackage[Defines.lengthDgram - 2]);
                         }
                     }
                 }
             }
         }
-        private void TryGetImageUser(byte userNumber)
+        private void TryGetImageUser(byte userChatNumber)
         {
-            if (QueuesUsersPackage[userNumber].Count > Defines.MaxPackagesOnOneImage)
+            if (QueuesUsersPackages[userChatNumber].Count > Defines.MaxPackagesOnOneImage)
             {
                 int pointer = 0;
                 byte[] imageInBytes = new byte[Defines.lengthDgram * Defines.MaxPackagesOnOneImage + 1];
                 thisEventThread.WaitOne();
-                byte[] currentPackage = QueuesUsersPackage[userNumber].Dequeue();
+                byte[] currentPackage = QueuesUsersPackages[userChatNumber].Dequeue();
                 nextEventThread.Set();
                 if (currentPackage[Defines.lengthDgram - 1] == 1)
                 {
-                    byte reducingQuality = currentPackage[Defines.lengthDgram - 3];
-                    for (int i = 0; i < Defines.lengthDgram - 3; i++)
+                    for (int i = 0; i < Defines.lengthDgram - 2; i++)
                     {
                         imageInBytes[pointer] = currentPackage[i];
                         pointer++;
                     }
-                    while ((QueuesUsersPackage[userNumber].Count > 0) && (QueuesUsersPackage[userNumber].Peek()[Defines.lengthDgram - 1] == 0))
+                    while ((QueuesUsersPackages[userChatNumber].Count > 0) && (QueuesUsersPackages[userChatNumber].Peek()[Defines.lengthDgram - 1] == 0))
                     {
                         thisEventThread.WaitOne();
-                        currentPackage = QueuesUsersPackage[userNumber].Dequeue();
+                        currentPackage = QueuesUsersPackages[userChatNumber].Dequeue();
                         nextEventThread.Set();
-                        for (int i = 0; i < Defines.lengthDgram - 3; i++)
+                        for (int i = 0; i < Defines.lengthDgram - 2; i++)
                         {
                             imageInBytes[pointer] = currentPackage[i];
                             pointer++;
                         }
                     }
                     Image image = ByteArrayToImage(imageInBytes);
-                    SetImageOnForm(new Bitmap(image, image.Width * reducingQuality, image.Width * reducingQuality * image.Height / image.Width), userNumber);
+                    SetImageOnForm(new Bitmap(image, pb_Video.Width / listUsers.Count, pb_Video.Width / listUsers.Count * image.Height / image.Width), userChatNumber);
                 }
             }           
         }
-        private void SetImageOnForm(Bitmap image, int userNumber)
+        private void SetImageOnForm(Bitmap image, int userChatNumber)
         {
-            int index = listCurrentUsersChatNumbers.IndexOf(userNumber);
+            int index = -1;
+            for(int i = 0; i < listUsers.Count; i++)
+            {
+                if (listUsers[i].chatNumber == userChatNumber)
+                {
+                    index = i;
+                }
+            }
             Graphics g = pb_Video.CreateGraphics();
-            g.DrawImage(image, index * (pb_Video.Width / listCurrentUsersChatNumbers.Count), (pb_Video.Height - image.Height)/2);
+            g.DrawImage(image, index * (pb_Video.Width / listUsers.Count), (pb_Video.Height - image.Height)/2);
         }
         /*private byte[] RevieseBytesForUdp(Udp_Client udp_Client)
         {
@@ -185,41 +195,181 @@ namespace VideoChat
                 threadReceiveVideo.Abort();
             }
         }
-        public bool RemoveUser(int userChatNumber)
+        public void RemoveUser(string ip)
         {
-            lock (listCurrentUsersChatNumbers)
+            lock (listUsers)
             {
-                if (listCurrentUsersChatNumbers.Contains(userChatNumber))
+                lock (QueuesUsersPackages)
                 {
-                    listCurrentUsersChatNumbers.Remove(userChatNumber);
-                    QueuesUsersPackage.Remove(userChatNumber);
-                    Graphics g = pb_Video.CreateGraphics();
-                    g.Clear(Color.White);
-                    return true;
+                    InfoReceiveUser user = GetUser(ip);
+                    if (user != null)
+                    {
+                        QueuesUsersPackages.Remove(user.chatNumber);
+                        listUsers.Remove(user);
+                    }
                 }
-                else
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void AddUser(string ip, string name, int chatNumber)
+        {
+            lock (listUsers)
+            {
+                lock (QueuesUsersPackages)
                 {
-                    return false;
+                    InfoReceiveUser user = GetUser(ip);
+                    if (user == null)
+                    {
+                        listUsers.Add(new InfoReceiveUser(ip, name, chatNumber));
+                        QueuesUsersPackages.Add(chatNumber, new Queue<byte[]>());
+                    }
+                }
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void AddCallUser(string ip)
+        {
+            lock (listUsers)
+            {
+                InfoReceiveUser user = GetUser(ip);
+                if (user != null){
+                    user.answerUser = false;
+                    user.callUser = true;
+                }
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void RemoveCallUser(string ip)
+        {
+            lock (listUsers)
+            {
+                InfoReceiveUser user = GetUser(ip);
+                if (user != null)
+                {
+                    user.callUser = false;
+                }
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void AddAnswerUser(string ip)
+        {
+            lock (listUsers)
+            {
+                InfoReceiveUser user = GetUser(ip);
+                if (user != null)
+                {
+                    user.answerUser = true;
+                    user.callUser = false;
+                }
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void RemoveAnswerUser(string ip)
+        {
+            lock (listUsers)
+            {
+                InfoReceiveUser user = GetUser(ip);
+                if (user != null)
+                {
+                    user.answerUser = false;
+                }
+            }
+            ClearVideo();
+            UpdateStaticComponentVideo();
+        }
+        public void ClearListUsers()
+        {
+            lock (listUsers)
+            {
+                lock (QueuesUsersPackages)
+                {
+                    listUsers.Clear();
+                    QueuesUsersPackages.Clear();
+                    ClearVideo();
                 }
             }
         }
-        public bool AddUser(int userChatNumber)
+        private void SetUsersNameUnderVideo()
         {
-            lock (listCurrentUsersChatNumbers)
+            lock (listUsers)
             {
-                if (!listCurrentUsersChatNumbers.Contains(userChatNumber))
+                Font font = new Font(Defines.familyName, Defines.emSize);
+                int count = listUsers.Count;
+                for (int i = 0; i < count; i++)
                 {
-                    listCurrentUsersChatNumbers.Add(userChatNumber);
-                    QueuesUsersPackage.Add(userChatNumber, new Queue<byte[]>());
+                    string name = listUsers[i].name;
                     Graphics g = pb_Video.CreateGraphics();
-                    g.Clear(Color.White);
-                    return true;
-                }
-                else
-                {
-                    return false;
+                    g.DrawString(name, font, Brushes.Black, (pb_Video.Width * (i + 1) / count) - (pb_Video.Width / count / 2) - (name.Length * Defines.emSize / 2), pb_Video.Height - Defines.emSize * 2);
                 }
             }
+        }
+        private void SetUsersImagesCall()
+        {
+            lock (listUsers)
+            {
+                foreach (InfoReceiveUser user in listUsers)
+                {
+                    if (user.callUser)
+                    {
+                        Bitmap imageCall = new Bitmap(Defines.pathCallImage);
+                        imageCall = new Bitmap(imageCall, pb_Video.Width / listUsers.Count, pb_Video.Width / listUsers.Count * imageCall.Height / imageCall.Width);
+                        int numberUser = listUsers.IndexOf(user);
+                        AddImageOnVideo(imageCall, numberUser * (pb_Video.Width / listUsers.Count), (pb_Video.Height - imageCall.Height) / 2);
+                        user.callButton = new Point(numberUser * (pb_Video.Width / listUsers.Count) + imageCall.Width / 2, (pb_Video.Height - imageCall.Height) / 2 + (int)(imageCall.Height * Defines.reletionSizeInCallImage));
+                    }
+                }
+            }
+        }
+        private void SetUsersImagesAnswer()
+        {
+            lock (listUsers)
+            {
+                foreach (InfoReceiveUser user in listUsers)
+                {
+                    if (user.answerUser)
+                    {
+                        Bitmap imageAnswer = new Bitmap(Defines.pathAnswerImage);
+                        imageAnswer = new Bitmap(imageAnswer, pb_Video.Width / listUsers.Count, pb_Video.Width / listUsers.Count * imageAnswer.Height / imageAnswer.Width);
+                        int numberUser = listUsers.IndexOf(user);
+                        AddImageOnVideo(imageAnswer, numberUser * (pb_Video.Width / listUsers.Count), (pb_Video.Height - imageAnswer.Height) / 2);
+                        user.answerDownButton = new Point(numberUser * (pb_Video.Width / listUsers.Count) + (int)(imageAnswer.Width * Defines.reletionSizeWidthDownInAnswerImage), (pb_Video.Height - imageAnswer.Height) / 2 + (int)(imageAnswer.Height * Defines.reletionSizeHeightInAnswerImage));
+                        user.answerUpButton = new Point(numberUser * (pb_Video.Width / listUsers.Count) + (int)(imageAnswer.Width * Defines.reletionSizeWidthUpInAnswerImage), (pb_Video.Height - imageAnswer.Height) / 2 + (int)(imageAnswer.Height * Defines.reletionSizeHeightInAnswerImage));
+                    }
+                }
+            }
+        }
+        private void ClearVideo()
+        {
+            Graphics g = pb_Video.CreateGraphics();
+            g.Clear(Color.White);
+        }
+        private void AddImageOnVideo(Image image, float x, float y)
+        {
+            Graphics g = pb_Video.CreateGraphics();
+            g.DrawImage(image, x, y);
+        }
+        private void UpdateStaticComponentVideo()
+        {
+            SetUsersImagesAnswer();
+            SetUsersImagesCall();
+            SetUsersNameUnderVideo();
+        }
+        private InfoReceiveUser GetUser(string ip)
+        {
+            InfoReceiveUser user = null;
+            foreach (InfoReceiveUser valueUser in listUsers)
+            {
+                if (valueUser.ip == ip)
+                {
+                    user = valueUser;
+                }
+            }
+            return user;
         }
     }
 }

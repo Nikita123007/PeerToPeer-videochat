@@ -1,6 +1,6 @@
 ﻿namespace VideoChat
 {
-    partial class Form1
+    partial class Videochat
     {
         /// <summary>
         /// Обязательная переменная конструктора.
@@ -54,9 +54,10 @@
             this.pb_Video.Location = new System.Drawing.Point(0, 33);
             this.pb_Video.Margin = new System.Windows.Forms.Padding(4);
             this.pb_Video.Name = "pb_Video";
-            this.pb_Video.Size = new System.Drawing.Size(874, 408);
+            this.pb_Video.Size = new System.Drawing.Size(874, 571);
             this.pb_Video.TabIndex = 0;
             this.pb_Video.TabStop = false;
+            this.pb_Video.MouseClick += new System.Windows.Forms.MouseEventHandler(this.pb_Video_MouseClick);
             // 
             // gb_standartButtons
             // 
@@ -66,7 +67,7 @@
             this.gb_standartButtons.Controls.Add(this.btn_Abort_Call_Group);
             this.gb_standartButtons.Controls.Add(this.btn_Call);
             this.gb_standartButtons.Controls.Add(this.cb_Users);
-            this.gb_standartButtons.Location = new System.Drawing.Point(0, 448);
+            this.gb_standartButtons.Location = new System.Drawing.Point(0, 598);
             this.gb_standartButtons.Name = "gb_standartButtons";
             this.gb_standartButtons.Size = new System.Drawing.Size(874, 98);
             this.gb_standartButtons.TabIndex = 4;
@@ -188,12 +189,12 @@
             this.cb_Quality.Text = "Small";
             this.cb_Quality.SelectedIndexChanged += new System.EventHandler(this.toolStripComboBox1_SelectedIndexChanged);
             // 
-            // Form1
+            // Videochat
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 21F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(874, 550);
+            this.ClientSize = new System.Drawing.Size(874, 696);
             this.Controls.Add(this.gb_standartButtons);
             this.Controls.Add(this.pb_Video);
             this.Controls.Add(this.menuStrip1);
@@ -203,7 +204,7 @@
             this.Margin = new System.Windows.Forms.Padding(4);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "Form1";
+            this.Name = "Videochat";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "VideoChat";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);

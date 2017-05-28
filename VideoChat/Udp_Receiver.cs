@@ -8,7 +8,7 @@ using System.Net.Sockets;
 
 namespace VideoChat
 {
-    class Udp_Receiver : IDisposable
+    class Udp_Receiver
     {
         private Socket socket;
         private IPEndPoint endPoint;
@@ -32,7 +32,6 @@ namespace VideoChat
             ipAddress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0].ToString();
             endPoint = new IPEndPoint(IPAddress.Parse(ipAddress), port);
             socket.ReceiveBufferSize = Defines.lengthDgram * 10;
-            socket.ReceiveTimeout = Defines.ReceiveTimeout;
             socket.Bind(endPoint);
         }
         public byte[] ReceiveTo(int lengthDgram)
@@ -41,9 +40,8 @@ namespace VideoChat
             try
             {
                 socket.Receive(data);
-               // socket.BeginReceive(data, 0, lengthDgram, )
             }
-            catch (Exception er)
+            catch (Exception)
             {
             }
             return data;
@@ -54,11 +52,8 @@ namespace VideoChat
         }
         public void Close()
         {
+            socket.Shutdown(SocketShutdown.Receive);
             socket.Close();
-        }
-        public void Dispose()
-        {
-            Close();
         }
     }
 }

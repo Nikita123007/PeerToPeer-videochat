@@ -15,7 +15,7 @@ namespace VideoChat
     class SendVideo
     {      
         private VideoCaptureDevice finalVideo;
-        private List<string> listCurrentUsersIp;
+        private List<string> lisеUsersIp;
         private int myChatNumber;
         private PictureBox pb_Video;
         private Udp_Sender udp_Sender;
@@ -53,7 +53,7 @@ namespace VideoChat
             udp_Sender = new Udp_Sender();
             Pb_Video = pb_Video;
             MyChatNumber = myChatNumber;
-            listCurrentUsersIp = new List<string>();
+            lisеUsersIp = new List<string>();
             MonikerStringVideo = monikerStringVideo;
             this.nextEventThread = nextEventThread;
             this.thisEventThread = thisEventThread;
@@ -68,16 +68,16 @@ namespace VideoChat
         private void FinalVideo_NewFrame(object sender, NewFrameEventArgs eventArgs)
         {
             thisEventThread.WaitOne();
-            lock (listCurrentUsersIp)
+            lock (lisеUsersIp)
             {
                 nextEventThread.Set();
-                if (listCurrentUsersIp.Count != 0)
+                if (lisеUsersIp.Count != 0)
                 {
-                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / listCurrentUsersIp.Count / Defines.reducingQuality, eventArgs.Frame.Height * (pb_Video.Width / listCurrentUsersIp.Count / Defines.reducingQuality) / eventArgs.Frame.Width);
+                    Bitmap picture = new Bitmap(eventArgs.Frame, pb_Video.Width / Defines.reducingQuality, eventArgs.Frame.Height * (pb_Video.Width / Defines.reducingQuality) / eventArgs.Frame.Width);
                     byte[] pictureInByte = ImageToByteArray(picture);
-                    for (int i = 0; i < listCurrentUsersIp.Count; i++)
+                    for (int i = 0; i < lisеUsersIp.Count; i++)
                     {
-                        SendBytesForUdp(udp_Sender, pictureInByte, listCurrentUsersIp[i]);
+                        SendBytesForUdp(udp_Sender, pictureInByte, lisеUsersIp[i]);
                     }
                 }
             }
@@ -92,7 +92,6 @@ namespace VideoChat
                 try
                 {
                     sendData[Defines.lengthDgram - 2] = (byte)myChatNumber;
-                    sendData[Defines.lengthDgram - 3] = Defines.reducingQuality;
                     if (data.Length <= (Defines.lengthDgram - 2))
                     {
                         data.CopyTo(sendData, 0);
@@ -109,7 +108,7 @@ namespace VideoChat
                                 sendData[Defines.lengthDgram - 1] = 1;
                             else
                                 sendData[Defines.lengthDgram - 1] = 0;
-                            for (int index = 0; index < Defines.lengthDgram - 3; index++)
+                            for (int index = 0; index < Defines.lengthDgram - 2; index++)
                             {
                                 if (pointer < data.Length)
                                 {
@@ -152,33 +151,14 @@ namespace VideoChat
             Image returnImage = Image.FromStream(ms);
             return returnImage;
         }
-        private Bitmap ReSizeBitmap(Bitmap source, int width, int height)
-        {
-            /*double relationSource = (double)source.Width / (double)source.Height;
-            double relationDest = (double)width / (double)height;
-            if (relationSource > relationDest)
-            {
-                return new Bitmap(source, width, (int)(width / relationSource));
-            }
-            else if(relationSource < relationDest)
-            {
-                return new Bitmap(source, height, (int)(relationSource * height));
-            }
-            else
-            {
-                return new Bitmap(source, width, height);
-            }*/
-            return new Bitmap(source, width, source.Height * width / source.Width);
-        }
         public bool RemoveUser(string ip)
         {
-            lock (listCurrentUsersIp)
+            lock (lisеUsersIp)
             {
-                if (listCurrentUsersIp.Contains(ip))
+                if (lisеUsersIp.Contains(ip))
                 {
-                    listCurrentUsersIp.Remove(ip);
-                    Graphics g = pb_Video.CreateGraphics();
-                    g.Clear(Color.White);
+                    lisеUsersIp.Remove(ip);
+                    ClearVideo();
                     return true;
                 }
                 else
@@ -189,13 +169,12 @@ namespace VideoChat
         }
         public bool AddUser(string ip)
         {
-            lock (listCurrentUsersIp)
+            lock (lisеUsersIp)
             {
-                if (!listCurrentUsersIp.Contains(ip))
+                if (!lisеUsersIp.Contains(ip))
                 {
-                    listCurrentUsersIp.Add(ip);
-                    Graphics g = pb_Video.CreateGraphics();
-                    g.Clear(Color.White);
+                    lisеUsersIp.Add(ip);
+                    ClearVideo();
                     return true;
                 }
                 else
@@ -206,10 +185,22 @@ namespace VideoChat
         }
         public bool ContainUser(string ip)
         {
-            lock (listCurrentUsersIp)
+            lock (lisеUsersIp)
             {
-                return listCurrentUsersIp.Contains(ip);
+                return lisеUsersIp.Contains(ip);
             }
+        }
+        public void ClearListUsers()
+        {
+            lock (lisеUsersIp)
+            {
+                lisеUsersIp.Clear();
+            }
+        }
+        private void ClearVideo()
+        {
+            Graphics g = pb_Video.CreateGraphics();
+            g.Clear(Color.White);
         }
     }
 }

@@ -6,47 +6,44 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Windows.Forms;
 using System.Net;
+using System.Drawing;
 
 namespace VideoChat
 {
     class GetRequests
     {
         private Thread threadGetRequests;
-        private AutoResetEvent nextEventThread;
-        private AutoResetEvent thisEventThread;
-        private Udp_Receiver RequestsFromNewUser;
-        private Udp_Sender RequestAboutNewUser;
+        private Udp_Receiver RequestsReceiver;
+        private Udp_Sender RequestSender;
         public int myChatNumber;
         public List<string> listUsersIp;
         public List<int> listUsersChatNumbers;
-        public List<string> listUsersName;
+        public List<string> listUsersNames;
         public string myUserName;
-        private bool flagGetRequests;
         private SendVideo sendVideo;
         private ReceiveVideo receiveVideo;
         public event delegateUpdateListUsers eventUpdateListUsers;
+        public PictureBox pb_Video;
 
-        public GetRequests(string myUserName, AutoResetEvent nextEventThread, AutoResetEvent thisEventThread, SendVideo sendVideo, ReceiveVideo receiveVideo, delegateUpdateListUsers eventUpdateListUsers)
+        public GetRequests(string myUserName, SendVideo sendVideo, ReceiveVideo receiveVideo, delegateUpdateListUsers eventUpdateListUsers, PictureBox pb_Video)
         {
             myChatNumber = Defines.DefaultChatNumber;
-            RequestAboutNewUser = new Udp_Sender();
-            RequestsFromNewUser = new Udp_Receiver(Defines.portRequestNewUser);
-            this.nextEventThread = nextEventThread;
-            this.thisEventThread = thisEventThread;
             listUsersChatNumbers = new List<int>();
-            listUsersName = new List<string>();
+            listUsersNames = new List<string>();
             listUsersIp = new List<string>();
             this.myUserName = myUserName;
-            flagGetRequests = false;
             this.sendVideo = sendVideo;
             this.receiveVideo = receiveVideo;
             threadGetRequests = new Thread(GetRequest);
             this.eventUpdateListUsers = eventUpdateListUsers;
+            this.pb_Video = pb_Video;
         }
         public void StartGetRequests()
         {
             if ((threadGetRequests == null) || (!threadGetRequests.IsAlive))
             {
+                RequestSender = new Udp_Sender();
+                RequestsReceiver = new Udp_Receiver(Defines.portGetRequests);
                 threadGetRequests.Start();
             }
         }
@@ -54,6 +51,8 @@ namespace VideoChat
         {
             if ((threadGetRequests != null) && (threadGetRequests.IsAlive))
             {
+                RequestSender.Close();
+                RequestsReceiver.Close();
                 threadGetRequests.Abort();
             }
         }
@@ -72,77 +71,73 @@ namespace VideoChat
             {
                 request[i] = nameInBytes[j];
             }
-            RequestAboutNewUser.Connect(ip, Defines.portRequestNewUser);
-            if (RequestAboutNewUser.Connected)
+            RequestSender.Connect(ip, Defines.portGetRequests);
+            if (RequestSender.Connected)
             {
-                RequestAboutNewUser.SendTo(request);
+                RequestSender.SendTo(request);
             }
         }
         private void GetRequest()
         {
             while (true)
             {
-                thisEventThread.WaitOne();
-                nextEventThread.Set();
-                if (RequestsFromNewUser.AvailableData() >= Defines.RequestSize)
+                byte[] request = RequestsReceiver.ReceiveTo(Defines.RequestSize);
+                string ip = request[0].ToString() + "." + request[1].ToString() + "." + request[2].ToString() + "." + request[3].ToString();
+                int chatNumber = request[4];
+                FlagsRequest numberRequest = (FlagsRequest)request[5];
+                byte[] nameInBytes = new byte[Defines.maxLenghtName];
+                for (int i = Defines.startPositionNameInRequest, j = 0; (i < Defines.RequestSize) && (j < nameInBytes.Length); i++, j++)
                 {
-                    byte[] request = RequestsFromNewUser.ReceiveTo(Defines.RequestSize);
-                    flagGetRequests = true;
-                    string ip = request[0].ToString() + "." + request[1].ToString() + "." + request[2].ToString() + "." + request[3].ToString();
-                    int chatNumber = request[4];
-                    FlagsRequest numberRequest = (FlagsRequest)request[5];
-                    byte[] nameInBytes = new byte[Defines.maxLenghtName];
-                    for (int i = Defines.startPositionNameInRequest, j = 0; (i < Defines.RequestSize) && (j < nameInBytes.Length); i++, j++)
+                    nameInBytes[j] = request[i];
+                }
+                string name = TranslateBytesInName(nameInBytes);
+                if ((chatNumber == 0) || (ip == GetHostIP()))
+                {
+                    continue;
+                }
+                if (numberRequest == FlagsRequest.FSetInfo)
+                {
+                    AddUserIpAndChatNumber(ip, chatNumber, name);
+                }
+                if (numberRequest == FlagsRequest.FGetInfo)
+                {
+                    SendRequest((byte)FlagsRequest.FSetInfo, ip);
+                    AddUserIpAndChatNumber(ip, chatNumber, name);
+                }
+                if (numberRequest == FlagsRequest.FTrySetUser)
+                {
+                    if (!sendVideo.ContainUser(ip))
                     {
-                        nameInBytes[j] = request[i];
-                    }
-                    string name = TranslateBytesInName(nameInBytes);
-                    if ((chatNumber == 0) || (ip == GetHostIP()))
-                    {
-                        continue;
-                    }
-                    if (numberRequest == FlagsRequest.FSetInfo)
-                    {
-                        AddUserIpAndChatNumber(ip, chatNumber, name);
-                    }
-                    if (numberRequest == FlagsRequest.FGetInfo)
-                    {
-                        SendRequest((byte)FlagsRequest.FSetInfo, ip);
-                        AddUserIpAndChatNumber(ip, chatNumber, name);
-                    }
-                    if (numberRequest == FlagsRequest.FTrySetUser)
-                    {
-                        if (!sendVideo.ContainUser(ip))
+                        receiveVideo.AddUser(ip, name, chatNumber);
+                        receiveVideo.AddAnswerUser(ip);
+                        /*if (MessageBox.Show("User: " + name + " with chat number " + chatNumber + " and ip " + ip + " want add. Add his?", "Call", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
                         {
-                            if (MessageBox.Show("User: " + name + " with chat number " + chatNumber + " and ip " + ip + " want add. Add his?", "Call", MessageBoxButtons.YesNo, MessageBoxIcon.Asterisk, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
-                            {
-                                SendRequest(FlagsRequest.FAddUser, ip);
-                                AddUserIpAndChatNumber(ip, chatNumber, name);
-                                AddNewUserInGroup(ip, chatNumber);
-                            }
-                            else
-                            {
-                                SendRequest(FlagsRequest.FNoAddUser, ip);
-                                AddUserIpAndChatNumber(ip, chatNumber, name);
-                            }
+                            SendRequest(FlagsRequest.FAddUser, ip);
+                            AddUserIpAndChatNumber(ip, chatNumber, name);
+                            AddNewUserInGroup(ip, chatNumber, name);
                         }
-                    }
-                    if (numberRequest == FlagsRequest.FAddUser)
-                    {
-                        AddNewUserInGroup(ip, chatNumber);
-                    }
-                    if (numberRequest == FlagsRequest.FRemoveUser)
-                    {
-                        RemoveUserWithGroup(ip, chatNumber);
-                    }
-                    if (numberRequest == FlagsRequest.FNoAddUser)
-                    {
-                        MessageBox.Show(name + " didn't pick up the phone.", "Answer ", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        else
+                        {
+                            SendRequest(FlagsRequest.FNoAddUser, ip);
+                            AddUserIpAndChatNumber(ip, chatNumber, name);
+                            RemoveUserWithGroup(ip);
+                        }
+                        receiveVideo.RemoveAnswerUser(ip);*/
                     }
                 }
-                else
+                if (numberRequest == FlagsRequest.FAddUser)
                 {
-                    flagGetRequests = false;
+                    AddNewUserInGroup(ip, chatNumber, name);
+                }
+                if (numberRequest == FlagsRequest.FRemoveUser)
+                {
+                    RemoveUserWithGroup(ip);
+                }
+                if (numberRequest == FlagsRequest.FNoAddUser)
+                {
+                    receiveVideo.RemoveCallUser(ip);
+                    RemoveUserWithGroup(ip);
+                   // MessageBox.Show(name + " didn't pick up the phone.", "Answer ", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -185,27 +180,31 @@ namespace VideoChat
             }
             return Encoding.ASCII.GetString(clearNameInByte);
         }
-        private void RemoveUserWithGroup(string ip, int chatNumber)
+        private void RemoveUserWithGroup(string ip)
         {
             sendVideo.RemoveUser(ip);
-            receiveVideo.RemoveUser(chatNumber);
+            receiveVideo.RemoveUser(ip);
         }
         public void AbortGroup()
         {
-            for (int i = 0; i < listUsersIp.Count; i++)
+            lock (listUsersIp)
             {
-                sendVideo.RemoveUser(listUsersIp[i]);
-                receiveVideo.RemoveUser(listUsersChatNumbers[i]);
+                for (int i = 0; i < listUsersIp.Count; i++)
+                {
+                    SendRequest(FlagsRequest.FRemoveUser, listUsersIp[i]);
+                }
+                sendVideo.ClearListUsers();
+                receiveVideo.ClearListUsers();
             }
         }
-        private void AddNewUserInGroup(string ip, int chatNumber)
+        private void AddNewUserInGroup(string ip, int chatNumber, string name)
         {
             sendVideo.AddUser(ip);
-            receiveVideo.AddUser(chatNumber);
+            receiveVideo.AddUser(ip, name, chatNumber);
         }
         private void AddUserIpAndChatNumber(string ip, int chatNumber, string name)
         {
-            lock (listUsersName)
+            lock (listUsersNames)
             {
                 lock (listUsersIp)
                 {
@@ -215,16 +214,16 @@ namespace VideoChat
                         {
                             listUsersIp.Add(ip);
                             listUsersChatNumbers.Add(chatNumber);
-                            listUsersName.Add(name);
+                            listUsersNames.Add(name);
                             eventUpdateListUsers();
                         }
                         else
                         {
                             int indexElement = listUsersIp.IndexOf(ip);
-                            if ((listUsersChatNumbers[indexElement] != chatNumber) || (listUsersName[indexElement] != name))
+                            if ((listUsersChatNumbers[indexElement] != chatNumber) || (listUsersNames[indexElement] != name))
                             {
                                 listUsersChatNumbers[indexElement] = chatNumber;
-                                listUsersName[indexElement] = name;
+                                listUsersNames[indexElement] = name;
                                 eventUpdateListUsers();
                             }
                         }
@@ -234,7 +233,7 @@ namespace VideoChat
         }
         private void UpdateUsers()
         {
-            lock (listUsersName)
+            lock (listUsersNames)
             {
                 lock (listUsersIp)
                 {
@@ -242,7 +241,7 @@ namespace VideoChat
                     {
                         listUsersIp.Clear();
                         listUsersChatNumbers.Clear();
-                        listUsersName.Clear();
+                        listUsersNames.Clear();
                         SendRequest(FlagsRequest.FGetInfo, Defines.broadcast);
                     }
                 }
@@ -252,13 +251,15 @@ namespace VideoChat
         {
             UpdateUsers();
             Thread.Sleep(1000);
-            while (flagGetRequests) ;
+            while (RequestsReceiver.AvailableData() != 0);
             int myNumber = 1;
             while (listUsersChatNumbers.Contains(myNumber))
             {
                 myNumber++;
             }
             myNumber = myNumber % 256;
+            myChatNumber = myNumber;
+            sendVideo.MyChatNumber = myNumber;
             lock (listUsersIp)
             {
                 for (int i = 0; i < listUsersIp.Count; i++)
@@ -266,8 +267,6 @@ namespace VideoChat
                     SendRequest((byte)FlagsRequest.FSetInfo, listUsersIp[i]);
                 }
             }
-            myChatNumber = myNumber;
-            sendVideo.MyChatNumber = myNumber;
         }
         private int GetNumberOfIp(string ipAddress, int number)
         {
@@ -289,6 +288,13 @@ namespace VideoChat
         {
             string Host = Dns.GetHostName();
             return Dns.GetHostByName(Host).AddressList[0].ToString();
+        }
+        public void Call(string callUserIp)
+        {
+            SendRequest(FlagsRequest.FTrySetUser, callUserIp);
+            int indexUser = listUsersIp.IndexOf(callUserIp);
+            receiveVideo.AddUser(callUserIp, listUsersNames[indexUser], listUsersChatNumbers[indexUser]);
+            receiveVideo.AddCallUser(callUserIp);
         }
     }
 }
