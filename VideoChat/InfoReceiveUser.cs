@@ -12,18 +12,16 @@ namespace VideoChat
     {
         public string ip = "";
         public string name = "";
-        public int chatNumber = 0;
         public bool callUser = false;
         public bool answerUser = false;
         public Point callButton = new Point();
         public Point answerDownButton = new Point();
         public Point answerUpButton = new Point();
 
-        public InfoReceiveUser(string ip, string name, int chatNumber)
+        public InfoReceiveUser(string ip, string name)
         {
             this.ip = ip;
             this.name = name;
-            this.chatNumber = chatNumber;
         }
     }
 }

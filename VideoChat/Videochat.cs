@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Text.RegularExpressions;
 using System.Xml.Serialization;
+using System.Net;
 
 namespace VideoChat
 {
@@ -32,7 +33,7 @@ namespace VideoChat
             StartGetRequests();
             StartReceiveVideo();
             StartSendVideo();
-            getRequests.SetMyChatNumber();
+            getRequests.UpdateUsers();
             eventThreadSendVideo.Set();
         }
         private void StartGetRequests()
@@ -63,21 +64,19 @@ namespace VideoChat
         private void BeginInitializeParams()
         {
             LoadSetting();
-            string myUserName = lblUserName.Text;
-            SetUserNameOnForm(myUserName);
             eventThreadSendVideo = new AutoResetEvent(false);
             eventThreadReceiveVideo = new AutoResetEvent(false);            
             if (tS_CB_Cameras.SelectedIndex != -1)
             {
-                sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, Defines.DefaultChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+                sendVideo = new SendVideo(videoCaptureDiveses[tS_CB_Cameras.SelectedIndex].MonikerString, GetHostIP(), pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
             }
             else
             {
-                sendVideo = new SendVideo("default", Defines.DefaultChatNumber, pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
+                sendVideo = new SendVideo("default", GetHostIP(), pb_Video, eventThreadReceiveVideo, eventThreadSendVideo);
             }
             receiveVideo = new ReceiveVideo(pb_Video, eventThreadSendVideo, eventThreadReceiveVideo);
             eventUpdateListUsers += UpdateListUsers;
-            getRequests = new GetRequests(myUserName, sendVideo, receiveVideo, eventUpdateListUsers, pb_Video);
+            getRequests = new GetRequests(sendVideo, receiveVideo, eventUpdateListUsers, pb_Video, lblUserName.Text);
         }
         private void SetUserNameOnForm(string name)
         {
@@ -179,18 +178,15 @@ namespace VideoChat
                 {
                     lock (getRequests.listUsersIp)
                     {
-                        lock (getRequests.listUsersChatNumbers)
+                        if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.Clear(); }));
+                        else cb_Users.Items.Clear();
+                        string[] recordsUsers = new string[getRequests.listUsersIp.Count];
+                        for (int i = 0; i < getRequests.listUsersIp.Count; i++)
                         {
-                            if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.Clear(); }));
-                            else cb_Users.Items.Clear();
-                            string[] recordsUsers = new string[getRequests.listUsersIp.Count];
-                            for (int i = 0; i < getRequests.listUsersIp.Count; i++)
-                            {
-                                recordsUsers[i] = getRequests.listUsersNames[i] + ": ip: " + getRequests.listUsersIp[i] + ", number: " + getRequests.listUsersChatNumbers[i].ToString();
-                            }
-                            if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.AddRange(recordsUsers); }));
-                            else cb_Users.Items.AddRange(recordsUsers);
+                            recordsUsers[i] = getRequests.listUsersNames[i] + ": " + getRequests.listUsersIp[i];
                         }
+                        if (cb_Users.InvokeRequired) cb_Users.BeginInvoke(new Action(() => { cb_Users.Items.AddRange(recordsUsers); }));
+                        else cb_Users.Items.AddRange(recordsUsers);
                     }
                 }
             }
@@ -314,6 +310,11 @@ namespace VideoChat
         public bool CheckMouse(int mouseX, int mouseY, Point point)
         {
             return ((Math.Abs(mouseX - point.X) < 40) && (Math.Abs(mouseY - point.Y) < 40));
+        }
+        public string GetHostIP()
+        {
+            string Host = Dns.GetHostName();
+            return Dns.GetHostByName(Host).AddressList[0].ToString();
         }
     }
 }

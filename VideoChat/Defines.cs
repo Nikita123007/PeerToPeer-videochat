@@ -14,11 +14,11 @@ namespace VideoChat
         public static string broadcast = "255.255.255.255";
         public static int MaxPackagesOnOneImage = 10;
         public static int ReceiveTimeout = 300;
-        public static int RequestSize = 26;
+        public static int RequestSize = 25;
         public static int minLenghtName = 5;
         public static int maxLenghtName = 20;
         public static byte reducingQuality = 5;
-        public static int startPositionNameInRequest = 6;
+        public static int startPositionNameInRequest = 5;
         public static string defaultName = "User";
         public static string pathSettingFile = "setting.xml";
         public static string pathCallImage = "call.bmp";
@@ -29,7 +29,6 @@ namespace VideoChat
         public static double reletionSizeWidthDownInAnswerImage = 10.4 / 25.4;
         public static double reletionSizeWidthUpInAnswerImage = 15.8 / 25.4;
         public static string familyName = "Segoe Marker";
-        public static byte DefaultChatNumber = 1;
         public static SettingVideoChat defaultSetting = new SettingVideoChat() {Name = Defines.defaultName, Quality = Qualityes.Small};
     }
 }

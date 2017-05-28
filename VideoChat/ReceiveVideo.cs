@@ -15,36 +15,17 @@ namespace VideoChat
         private Udp_Receiver udp_Receiver;
         private Thread threadReceiveVideo;
         private PictureBox pb_Video;
-        private Dictionary<int, Queue<byte[]>> QueuesUsersPackages;
+        private Dictionary<byte[], Queue<byte[]>> QueuesUsersPackages;
         private AutoResetEvent nextEventThread;
         private AutoResetEvent thisEventThread;
         public List<InfoReceiveUser> listUsers;
-
-      /*  public List<int> ListUsersChatNumbers
-        {
-            get
-            {
-                return listUsersChatNumbers;
-            }
-            set
-            {
-                listUsersChatNumbers = value;
-            }
-        }*/
-        public PictureBox Pb_Video
-        {
-            set
-            {
-                pb_Video = value;
-            }
-        }
 
         public ReceiveVideo(PictureBox pb_Video, AutoResetEvent nextEventThread, AutoResetEvent thisEventThread)
         {
             udp_Receiver = new Udp_Receiver(Defines.startPortsUsers);
             udp_Receiver.Timeout = Defines.ReceiveTimeout;
             listUsers = new List<InfoReceiveUser>();
-            Pb_Video = pb_Video;
+            this.pb_Video = pb_Video;
             threadReceiveVideo = new Thread(ReseiveDataOfImages);
             InitialiseQueues();
             this.nextEventThread = nextEventThread;
@@ -52,10 +33,10 @@ namespace VideoChat
         }
         private void InitialiseQueues()
         {
-            QueuesUsersPackages = new Dictionary<int, Queue<byte[]>>();
+            QueuesUsersPackages = new Dictionary<byte[], Queue<byte[]>>();
             foreach (InfoReceiveUser user in listUsers)
             {
-                QueuesUsersPackages.Add(user.chatNumber, new Queue<byte[]>());
+                QueuesUsersPackages.Add(GetIpInBytes(user.ip), new Queue<byte[]>());
             }
         }
         public void StartReceiveVideo()
@@ -76,23 +57,24 @@ namespace VideoChat
                     byte[] userPackage = udp_Receiver.ReceiveTo(Defines.lengthDgram);
                     lock (listUsers)
                     {
-                        if (QueuesUsersPackages.ContainsKey(userPackage[Defines.lengthDgram - 2]))
+                        byte[] ip = new byte[4] { userPackage[Defines.lengthDgram - 5], userPackage[Defines.lengthDgram - 4], userPackage[Defines.lengthDgram - 3], userPackage[Defines.lengthDgram - 2]};
+                        if (QueuesUsersPackages.ContainsKey(ip))
                         {
-                            QueuesUsersPackages[userPackage[Defines.lengthDgram - 2]].Enqueue(userPackage);
-                            TryGetImageUser(userPackage[Defines.lengthDgram - 2]);
+                            QueuesUsersPackages[ip].Enqueue(userPackage);
+                            TryGetImageUser(ip);
                         }
                     }
                 }
             }
         }
-        private void TryGetImageUser(byte userChatNumber)
+        private void TryGetImageUser(byte[] ip)
         {
-            if (QueuesUsersPackages[userChatNumber].Count > Defines.MaxPackagesOnOneImage)
+            if (QueuesUsersPackages[ip].Count > Defines.MaxPackagesOnOneImage)
             {
                 int pointer = 0;
                 byte[] imageInBytes = new byte[Defines.lengthDgram * Defines.MaxPackagesOnOneImage + 1];
                 thisEventThread.WaitOne();
-                byte[] currentPackage = QueuesUsersPackages[userChatNumber].Dequeue();
+                byte[] currentPackage = QueuesUsersPackages[ip].Dequeue();
                 nextEventThread.Set();
                 if (currentPackage[Defines.lengthDgram - 1] == 1)
                 {
@@ -101,87 +83,29 @@ namespace VideoChat
                         imageInBytes[pointer] = currentPackage[i];
                         pointer++;
                     }
-                    while ((QueuesUsersPackages[userChatNumber].Count > 0) && (QueuesUsersPackages[userChatNumber].Peek()[Defines.lengthDgram - 1] == 0))
+                    while ((QueuesUsersPackages[ip].Count > 0) && (QueuesUsersPackages[ip].Peek()[Defines.lengthDgram - 1] == 0))
                     {
                         thisEventThread.WaitOne();
-                        currentPackage = QueuesUsersPackages[userChatNumber].Dequeue();
+                        currentPackage = QueuesUsersPackages[ip].Dequeue();
                         nextEventThread.Set();
-                        for (int i = 0; i < Defines.lengthDgram - 2; i++)
+                        for (int i = 0; i < Defines.lengthDgram - 5; i++)
                         {
                             imageInBytes[pointer] = currentPackage[i];
                             pointer++;
                         }
                     }
                     Image image = ByteArrayToImage(imageInBytes);
-                    SetImageOnForm(new Bitmap(image, pb_Video.Width / listUsers.Count, pb_Video.Width / listUsers.Count * image.Height / image.Width), userChatNumber);
+                    SetImageOnForm(new Bitmap(image, pb_Video.Width / listUsers.Count, pb_Video.Width / listUsers.Count * image.Height / image.Width), ip);
                 }
             }           
         }
-        private void SetImageOnForm(Bitmap image, int userChatNumber)
+        private void SetImageOnForm(Bitmap image, byte[] ip)
         {
-            int index = -1;
-            for(int i = 0; i < listUsers.Count; i++)
-            {
-                if (listUsers[i].chatNumber == userChatNumber)
-                {
-                    index = i;
-                }
-            }
+            string ipStr = GetIpInString(ip);
+            int index = listUsers.IndexOf(GetUser(ipStr));
             Graphics g = pb_Video.CreateGraphics();
             g.DrawImage(image, index * (pb_Video.Width / listUsers.Count), (pb_Video.Height - image.Height)/2);
         }
-        /*private byte[] RevieseBytesForUdp(Udp_Client udp_Client)
-        {
-            int pointer = 0;
-            byte[] data = new byte[lengthDgram];
-            try
-            {
-                bool firstPackage = false;
-                while (!firstPackage)
-                {
-                    data = udp_Client.ReceiveTo(lengthDgram);
-                    if ((data[lengthDgram - 1] == 1) && (data[lengthDgram - 2] == 1) && (data[lengthDgram - 3] == 1))
-                    {
-                        firstPackage = true;
-                    }
-                }
-                byte[] tempResult = new byte[data[0] * lengthDgram];
-                for (int i = data[0]; i > 0; i--)
-                {
-                    data = udp_Client.ReceiveTo(lengthDgram);
-                    for (int index = 0; index < data.Length; index++)
-                    {
-                        tempResult[pointer] = data[index];
-                        pointer++;
-                    }
-                }
-                return tempResult;
-                //return ClearCancelBytes(ref tempResult);
-            }
-            catch (Exception er)
-            {
-                MessageBox.Show(er.Message);
-                return data;
-            }
-        }*/
-        /*private byte[] ClearCancelBytes(ref byte[] pictureInBytes)
-        {
-            int len = pictureInBytes.Length;
-            for (int i = len - 1; i > 0; i--)
-            {
-                if (pictureInBytes[i] != 0)
-                {
-                    len = i + 1;
-                    break;
-                }
-            }
-            byte[] result = new byte[len];
-            for (int i = 0; i < len; i++)
-            {
-                result[i] = pictureInBytes[i];
-            }
-            return result;
-        }*/
         public Image ByteArrayToImage(byte[] byteArrayIn)
         {
             MemoryStream ms = new MemoryStream(byteArrayIn);
@@ -204,7 +128,7 @@ namespace VideoChat
                     InfoReceiveUser user = GetUser(ip);
                     if (user != null)
                     {
-                        QueuesUsersPackages.Remove(user.chatNumber);
+                        QueuesUsersPackages.Remove(GetIpInBytes(ip));
                         listUsers.Remove(user);
                     }
                 }
@@ -212,7 +136,7 @@ namespace VideoChat
             ClearVideo();
             UpdateStaticComponentVideo();
         }
-        public void AddUser(string ip, string name, int chatNumber)
+        public void AddUser(string ip, string name)
         {
             lock (listUsers)
             {
@@ -221,8 +145,8 @@ namespace VideoChat
                     InfoReceiveUser user = GetUser(ip);
                     if (user == null)
                     {
-                        listUsers.Add(new InfoReceiveUser(ip, name, chatNumber));
-                        QueuesUsersPackages.Add(chatNumber, new Queue<byte[]>());
+                        listUsers.Add(new InfoReceiveUser(ip, name));
+                        QueuesUsersPackages.Add(GetIpInBytes(ip), new Queue<byte[]>());
                     }
                 }
             }
@@ -370,6 +294,15 @@ namespace VideoChat
                 }
             }
             return user;
+        }
+        public byte[] GetIpInBytes(string ipAddress)
+        {
+            string[] numbersOfIp = ipAddress.Split('.');
+            return new byte[4] { Convert.ToByte(numbersOfIp[0]), Convert.ToByte(numbersOfIp[1]), Convert.ToByte(numbersOfIp[2]), Convert.ToByte(numbersOfIp[3]) };
+        }
+        public string GetIpInString(byte[] ip)
+        {
+            return Convert.ToString(ip[0]) + "." + Convert.ToString(ip[1]) + "." + Convert.ToString(ip[2]) + "." + Convert.ToString(ip[3]);
         }
     }
 }

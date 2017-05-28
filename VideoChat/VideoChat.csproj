@@ -72,6 +72,7 @@
     <Compile Include="Defines.cs" />
     <Compile Include="FlagsRequest.cs" />
     <Compile Include="InfoReceiveUser.cs" />
+    <Compile Include="InfoSendUser.cs" />
     <Compile Include="Videochat.cs">
       <SubType>Form</SubType>
     </Compile>
